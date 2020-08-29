@@ -12,7 +12,7 @@ Params = collections.namedtuple(
 )
 
 
-# @partial(jax.jit, static_argnums=(1, 2))
+# @partial(jax.jit, static_argnums=(1, 2, 3))
 def get_params(
     X: np.ndarray,
     support_extension: Union[int, float] = 10,

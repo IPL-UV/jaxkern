@@ -45,6 +45,8 @@ def forward_gaussianization(X, params):
 @jax.jit
 def inverse_gaussianization(X, params):
 
+    print(X.min(), X.max())
+
     # transform to uniform domain
     X = inverse_inversecdf(X)
 

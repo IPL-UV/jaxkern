@@ -11,7 +11,7 @@ import seaborn as sns
 sns.reset_defaults()
 sns.set_context(context="talk", font_scale=0.7)
 
-from rbig_jax.transforms.gaussian import init_params_hist_1d, get_gauss_params
+from rbig_jax.transforms.gaussian import init_params_hist_1d, get_gauss_params_1d
 from rbig_jax.transforms.marginal import (
     forward_gaussianization,
     inverse_gaussianization,
@@ -43,7 +43,9 @@ x_samples = np.array(x_samples)
 apply_func = init_params_hist_1d(10, 1_000, 1e-5)
 
 # get gaussian params
-X_g, Xldj, params = get_gauss_params(x_samples, apply_func)
+X_g, Xldj, params, forward_func, inverse_func = get_gauss_params_1d(
+    x_samples, apply_func
+)
 
 
 plt.figure()
@@ -55,7 +57,7 @@ plt.hist(Xldj, bins=100)
 plt.savefig("scripts/demo1d_dx.png")
 
 # # Check forward transformation function
-X_g, Xldj = forward_gaussianization(x_samples, params)
+X_g, Xldj = forward_func(x_samples, params)
 
 plt.figure()
 plt.hist(X_g, bins=100)
@@ -66,7 +68,7 @@ plt.savefig("scripts/demo1d_xg_forward.png")
 # ===================================
 
 # Inverse Gaussian CDF (CDF function)
-X_approx = inverse_gaussianization(X_g, params)
+X_approx = inverse_func(X_g, params)
 
 # # inverse uniformization (quantile function)
 # X_approx = inverse_uniformization_1d(X_u_approx, params)
@@ -86,7 +88,7 @@ plt.savefig("scripts/demo1d_x_approx.png")
 X_g_samples = onp.random.randn(10_000)
 
 # Inverse Gaussian CDF (CDF function)
-X_samples = inverse_gaussianization(X_g_samples, params)
+X_samples = inverse_func(X_g_samples, params)
 
 # # inverse uniformization (quantile function)
 # X_approx = inverse_uniformization_1d(X_u_approx, params)
