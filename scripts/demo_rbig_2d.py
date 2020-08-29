@@ -13,6 +13,7 @@ from rbig_jax.data import get_classic
 from rbig_jax.information.reduction import information_reduction
 from rbig_jax.plots.info import plot_total_corr
 from rbig_jax.plots.joint import plot_joint
+from rbig_jax.plots.prob import plot_joint_prob
 from rbig_jax.transforms.gaussian import init_params_hist
 from rbig_jax.transforms.rbig import get_rbig_params
 
@@ -34,19 +35,19 @@ def main():
     wandb.config.dataset = "classic"
     wandb.config.support_extension = 10
     wandb.config.precision = 100
-    wandb.config.alpha = 1e-5
-    wandb.config.n_layers = 100
+    wandb.config.alpha = 0.0
+    wandb.config.n_layers = 20
 
     # =========================
     # Original Data
     # =========================
 
-    data = get_classic(wandb.config.n_samples).T
+    data = get_classic(wandb.config.n_samples)
 
     # ========================
     # PLOT
     # ========================
-    plot_joint(data.T, "blue", "Original Data", True)
+    plot_joint(data, "blue", "Original Data", True)
 
     # ========================
     # Init Transformation
@@ -58,7 +59,7 @@ def main():
     )
 
     # define step function (updates the parameters)
-    step = jax.jit(partial(get_rbig_params, init_func=init_func))
+    step = partial(get_rbig_params, init_func=init_func)
 
     def iterate(data, n_layers=10):
 
@@ -71,14 +72,15 @@ def main():
         it_red = list()
 
         # loop through the number of layers
+        X_transform = data
         with tqdm.trange(n_layers) as pbar:
             for i in pbar:
 
                 # step through
-                X_transform, iX_ldj, forward_func, inverse_func = step(data)
+                X_transform_, iX_ldj, forward_func, inverse_func = step(X_transform)
 
                 # calculate the information loss
-                it = information_reduction(data, X_transform)
+                it = information_reduction(X_transform, X_transform_)
                 wandb.log({"Delta Multi-Information": onp.array(it)})
 
                 # calculate the running total corrlation
@@ -91,27 +93,36 @@ def main():
                 inverse_funcs.append(inverse_func)
 
                 # update data and ldj
-                data = X_transform
+                X_transform = X_transform_
                 X_ldj += iX_ldj
 
                 # calculate negative log likelihood
                 nll = jax.scipy.stats.norm.logpdf(data) + X_ldj
-                nll = nll.sum()
+                nll = nll.sum(axis=1).mean()
                 wandb.log({"Negative Log-Likelihood": onp.array(nll)})
 
                 # plot the transformation (SLOW)
                 # plot_joint(data, "blue", f"Transform, Layer: {i}", True)
 
-        return data, X_ldj, forward_funcs, inverse_funcs, it_red
+        return X_transform, X_ldj, forward_funcs, inverse_funcs, it_red
 
     # run iterations
-    data, X_ldj, forward_funcs, inverse_funcs, it_red = iterate(
-        data.T, wandb.config.n_layers
+    X_transform, X_ldj, forward_funcs, inverse_funcs, it_red = iterate(
+        data, wandb.config.n_layers
     )
 
     # plot Gaussianized data
-    plot_joint(data, "red", title="Gaussianized Data", logger=True)
+    plot_joint(X_transform, "red", title="Gaussianized Data", logger=True)
 
+    # propagate through inverse function
+    inv_funcs = inverse_funcs[::-1]
+
+    X_approx = X_transform
+    for i in range(wandb.config.n_layers):
+
+        X_approx = inv_funcs[i](X_approx)
+
+    plot_joint(X_approx, "orange", title="Inverse Transformation", logger=True)
     # Plot total correlation
     plot_total_corr(
         np.cumsum(np.array(it_red)),
@@ -119,8 +130,32 @@ def main():
         logger=True,
     )
 
-    # TODO: Plot Samples Drawn
-    # TODO: Plot Probabilities
+    # Plot Log Probability
+    log_probs = jax.scipy.stats.norm.logpdf(data) + X_ldj
+
+    log_probs = log_probs.sum(axis=1)
+
+    # clip probabilities
+    log_probs_clipped = np.clip(log_probs, -20, 0)
+    plot_joint_prob(
+        data, log_probs_clipped, "Reds", title="Log Probability", logger=True
+    )
+
+    # Plot Probability
+    probs = np.exp(log_probs)
+
+    # clip probabilities
+    probs_clipped = np.clip(probs, 0, 1)
+    plot_joint_prob(data, probs_clipped, "Reds", title="Probability", logger=True)
+
+    # draw samples
+    gauss_samples = onp.random.randn(data.shape[0], data.shape[1])
+    X_approx = np.array(gauss_samples)
+    for i in range(wandb.config.n_layers):
+
+        X_approx = inv_funcs[i](X_approx)
+
+    plot_joint(X_approx, "green", title="Samples Drawn", logger=True)
 
 
 if __name__ == "__main__":

@@ -57,4 +57,5 @@ def forward_transform(X, apply_mg, params, apply_rot):
 def inverse_transform(X, apply_inv_mg, params, apply_inv_rot):
     X = apply_inv_rot(X)
     X = apply_inv_mg(X.T, params)
-    return X.T
+    X = X.T
+    return X
