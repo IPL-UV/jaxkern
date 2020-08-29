@@ -11,7 +11,7 @@ This repo uses the most updated `jax` library on github so this is absolutely es
 1. Clone the repository.
 
 ```bash
-git clone https://gitlab.com/frontierdevelopmentlab/fdl-us-2020-starspots/starspot-coverage-and-rotation.git
+git clone https://github.com/jejjohnson/rbig_jax
 ```
 
 2. Install using conda.
@@ -23,11 +23,9 @@ conda env create -f environment.yml
 3. If you already have the environment installed, you can update it.
 
 ```bash
-conda activate fdl_project
+conda activate jaxrbig
 conda env update --file environment.yml
 ```
-
-
 
 ---
 
