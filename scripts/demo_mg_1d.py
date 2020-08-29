@@ -1,21 +1,20 @@
 # JAX SETTINGS
 import jax
 import jax.numpy as np
-import numpy as onp
-from scipy.stats import beta
-
 # MATPLOTLIB Settings
 import matplotlib.pyplot as plt
+import numpy as onp
 import seaborn as sns
+from scipy.stats import beta
+
+from rbig_jax.transforms.gaussian import (get_gauss_params_1d,
+                                          init_params_hist_1d)
+from rbig_jax.transforms.marginal import (forward_gaussianization,
+                                          inverse_gaussianization)
 
 sns.reset_defaults()
 sns.set_context(context="talk", font_scale=0.7)
 
-from rbig_jax.transforms.gaussian import init_params_hist_1d, get_gauss_params_1d
-from rbig_jax.transforms.marginal import (
-    forward_gaussianization,
-    inverse_gaussianization,
-)
 
 # ============================
 # Generate Data

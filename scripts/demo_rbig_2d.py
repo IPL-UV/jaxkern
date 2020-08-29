@@ -1,216 +1,127 @@
-# JAX SETTINGS
+import time as time
+from functools import partial
+
 import jax
 import jax.numpy as np
+import numpy as onp
+import seaborn as sns
+import tqdm
 from jax.config import config
+
+import wandb
+from rbig_jax.data import get_classic
+from rbig_jax.information.reduction import information_reduction
+from rbig_jax.plots.info import plot_total_corr
+from rbig_jax.plots.joint import plot_joint
+from rbig_jax.transforms.gaussian import init_params_hist
+from rbig_jax.transforms.rbig import get_rbig_params
 
 config.update("jax_enable_x64", True)
 
-import numpy as onp
-from scipy.stats import beta
-
-import time as time
-
-# Plot Functions
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 sns.reset_defaults()
 sns.set_context(context="talk", font_scale=0.7)
 
-from rbig_jax.data import get_classic
-from rbig_jax.transforms.gaussian import (
-    init_params_hist,
-    get_gauss_params,
-)
-from rbig_jax.transforms.linear import init_pca_params
-from rbig_jax.transforms.rbig import get_rbig_params
-from rbig_jax.transforms.gaussian import init_params_hist
-from rbig_jax.information.entropy import entropy_marginal
-from rbig_jax.information.reduction import information_reduction
-import tqdm
 
-# =========================
-# Original Data
-# =========================
+def main():
+    # =========================
+    # Logger
+    # =========================
+    wandb.init(project="rbigjax-demo-2d", entity="emanjohnson91")
 
-data = get_classic(10_000).T
+    # config parameters
+    wandb.config.n_samples = 10_000
+    wandb.config.dataset = "classic"
+    wandb.config.support_extension = 10
+    wandb.config.precision = 100
+    wandb.config.alpha = 1e-5
+    wandb.config.n_layers = 100
 
-# ========================
-# PLOT
-# ========================
-fig = plt.figure(figsize=(5, 5))
+    # =========================
+    # Original Data
+    # =========================
 
-color = "blue"
-title = "Original Data"
-g = sns.jointplot(x=data[0], y=data[1], kind="hex", color=color)
-plt.xlabel("X")
-plt.ylabel("Y")
-plt.suptitle(title)
-plt.tight_layout()
-plt.savefig("scripts/demo2d_rbig_x.png")
+    data = get_classic(wandb.config.n_samples).T
 
+    # ========================
+    # PLOT
+    # ========================
+    plot_joint(data.T, "blue", "Original Data", True)
 
-# ========================
-# Init Transformation
-# ========================
+    # ========================
+    # Init Transformation
+    # ========================
 
-# initialize parameters getter function
-init_func = init_params_hist(10, 1_000, 1e-5)
+    # initialize parameters getter function
+    init_func = init_params_hist(
+        wandb.config.support_extension, wandb.config.precision, wandb.config.alpha,
+    )
 
-# # initialize parameters getter function
-# apply_func = init_params_hist(10, 1_000, 1e-5)
-
-# print(data.shape)
-# # get gaussian params
-# X_transform, Xldj, mg_params, forward_mg_func, inverse_mg_func = get_gauss_params(
-#     data, apply_func
-# )
-
-# # get rotation params
-# rot_params, forward_rot_func, inverse_rot_func = init_pca_params(X_transform.T)
-
-# # forward transformation
-# X_transform, X_ldj = forward_rot_func(X_transform.T)
-
-# X_transform, X_ldj, forward_func, inverse_func = get_rbig_params(data.T, init_func)
-
-
-# color = "Red"
-# title = "Transformed Data"
-# g = sns.jointplot(x=X_transform.T[0], y=X_transform.T[1], kind="hex", color=color)
-# plt.xlabel("X")
-# plt.ylabel("Y")
-# plt.suptitle(title)
-# plt.tight_layout()
-# plt.savefig("scripts/demo2d_rbig_xg.png")
-
-# # ========================
-# # Forward Transformation
-# # ========================
-# t0 = time.time()
-# X_transform, X_ldj = forward_func(data.T)
-# print(f"Time: {time.time()-t0:.5f}")
-# t0 = time.time()
-# X_transform, X_ldj = forward_func(data.T)
-# print(f"Time: {time.time()-t0:.5f}")
-
-# color = "Red"
-# title = "Transformed Data"
-# g = sns.jointplot(x=X_transform.T[0], y=X_transform.T[1], kind="hex", color=color)
-# plt.xlabel("X")
-# plt.ylabel("Y")
-# plt.suptitle(title)
-# plt.tight_layout()
-# plt.savefig("scripts/demo2d_rbig_xg_forward.png")
-
-
-# # ========================
-# # Inverse Transformation
-# # ========================
-
-# t0 = time.time()
-# X_approx = inverse_func(X_transform)
-# print(f"Time: {time.time()-t0:.5f}")
-# t0 = time.time()
-# X_approx = inverse_func(X_transform)
-# print(f"Time: {time.time()-t0:.5f}")
-
-# color = "Red"
-# title = "Transformed Data"
-# g = sns.jointplot(x=X_approx[0], y=X_approx[1], kind="hex", color=color)
-# plt.xlabel("X")
-# plt.ylabel("Y")
-# plt.suptitle(title)
-# plt.tight_layout()
-# plt.savefig("scripts/demo2d_rbig_x_approx.png")
-from functools import partial
-
-
-def iterate(data, n_layers=10):
-
-    X_ldj = np.zeros(data.shape)
-    forward_funcs = list()
-    inverse_funcs = list()
-    it_red = list()
+    # define step function (updates the parameters)
     step = jax.jit(partial(get_rbig_params, init_func=init_func))
-    with tqdm.trange(n_layers) as pbar:
-        for i in pbar:
-            X_transform, iX_ldj, forward_func, inverse_func = step(data)
-            # print(data.shape, X_transform.shape, X_ldj.shape, iX_ldj.shape)
 
-            # h = jax.vmap(entropy_marginal)(X_transform.T)
-            # print(h.shape, print(h))
-            it = information_reduction(data, X_transform)
-            # print(it)
-            it_red.append(it)
+    def iterate(data, n_layers=10):
 
-            forward_funcs.append(forward_func)
-            inverse_funcs.append(inverse_func)
+        # initialize the log determinant jacobian transforms
+        X_ldj = np.zeros(data.shape)
 
-            data = X_transform
-            X_ldj += iX_ldj
-    return data, X_ldj, forward_funcs, inverse_funcs, it_red
+        # prepare to grab the items
+        forward_funcs = list()
+        inverse_funcs = list()
+        it_red = list()
+
+        # loop through the number of layers
+        with tqdm.trange(n_layers) as pbar:
+            for i in pbar:
+
+                # step through
+                X_transform, iX_ldj, forward_func, inverse_func = step(data)
+
+                # calculate the information loss
+                it = information_reduction(data, X_transform)
+                wandb.log({"Delta Multi-Information": onp.array(it)})
+
+                # calculate the running total corrlation
+                it_red.append(it)
+                tc = np.array(it_red).sum()
+                wandb.log({"TC": onp.array(tc)})
+
+                # save functions
+                forward_funcs.append(forward_func)
+                inverse_funcs.append(inverse_func)
+
+                # update data and ldj
+                data = X_transform
+                X_ldj += iX_ldj
+
+                # calculate negative log likelihood
+                nll = jax.scipy.stats.norm.logpdf(data) + X_ldj
+                nll = nll.sum()
+                wandb.log({"Negative Log-Likelihood": onp.array(nll)})
+
+                # plot the transformation (SLOW)
+                # plot_joint(data, "blue", f"Transform, Layer: {i}", True)
+
+        return data, X_ldj, forward_funcs, inverse_funcs, it_red
+
+    # run iterations
+    data, X_ldj, forward_funcs, inverse_funcs, it_red = iterate(
+        data.T, wandb.config.n_layers
+    )
+
+    # plot Gaussianized data
+    plot_joint(data, "red", title="Gaussianized Data", logger=True)
+
+    # Plot total correlation
+    plot_total_corr(
+        np.cumsum(np.array(it_red)),
+        f"Information Reduction, TC:{np.sum(it_red):.4f}",
+        logger=True,
+    )
+
+    # TODO: Plot Samples Drawn
+    # TODO: Plot Probabilities
 
 
-data, X_ldj, forward_funcs, inverse_funcs, it_red = iterate(data.T, 50)
-
-color = "Red"
-title = "Transformed Data"
-g = sns.jointplot(x=data.T[0], y=data.T[1], kind="hex", color=color)
-plt.xlabel("X")
-plt.ylabel("Y")
-plt.suptitle(title)
-plt.tight_layout()
-plt.savefig("scripts/demo2d_rbig_xg_forward.png")
-
-color = "Red"
-title = f"Information Reduction, TC:{np.sum(it_red):.4f}"
-plt.figure()
-plt.plot(np.cumsum(np.array(it_red)))
-plt.xlabel("Layers")
-plt.ylabel("Total Correlation")
-plt.title(title)
-plt.tight_layout()
-plt.savefig("scripts/demo2d_rbig_xg_tc.png")
-
-# color = "Red"
-# title = "Transformed Data"
-# g = sns.jointplot(
-#     x=X_ldj.sum(axis=1).T[0], y=X_ldj.sum(axis=1).T[1], kind="hex", color=color
-# )
-# plt.xlabel("X")
-# plt.ylabel("Y")
-# plt.suptitle(title)
-# plt.tight_layout()
-# plt.savefig("scripts/demo2d_rbig_dx_forward.png")
-
-fake_data = onp.random.randn(10_000, 10)
-
-data, X_ldj, forward_funcs, inverse_funcs, it_red = iterate(fake_data, 50)
-
-color = "Red"
-title = f"Information Reduction, TC:{np.sum(it_red):.4f}"
-plt.figure()
-plt.plot(np.cumsum(np.array(it_red)))
-plt.xlabel("Layers")
-plt.ylabel("Total Correlation")
-plt.title(title)
-plt.tight_layout()
-plt.savefig("scripts/demo2d_rbig_xg_tc_2.png")
-# def iterate(data, n_layers=10):
-
-#     X_ldj = np.zeros(data.shape)
-#     forward_funcs = list()
-#     inverse_funcs = list()
-#     step = jax.jit(partial(get_rbig_params, init_func=init_func))
-#     with tqdm.trange(n_layers) as pbar:
-#         for i in pbar:
-#             data, iX_ldj, forward_func, inverse_func = step(data)
-#             # print(data.shape, X_transform.shape, X_ldj.shape, iX_ldj.shape)
-
-#             forward_funcs.append(forward_func)
-#             inverse_funcs.append(inverse_func)
-
-#             X_ldj = X_ldj + iX_ldj.T
-#     return data, X_ldj, forward_funcs, inverse_funcs
-
+if __name__ == "__main__":
+    main()

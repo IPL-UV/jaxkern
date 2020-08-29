@@ -1,7 +1,8 @@
-import pytest
 import jax.numpy as np
-from jax import random
 import numpy as onp
+import pytest
+from jax import random
+
 from src.utils import searchsorted
 
 

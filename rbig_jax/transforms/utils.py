@@ -1,5 +1,6 @@
+from typing import Tuple, Union
+
 import jax.numpy as np
-from typing import Union, Tuple
 
 
 def get_domain_extension(

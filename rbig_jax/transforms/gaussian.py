@@ -1,11 +1,12 @@
 from functools import partial
+
 import jax
 import jax.numpy as np
 
 from rbig_jax.transforms.histogram import get_params
 from rbig_jax.transforms.marginal import (
-    forward_inversecdf,
     forward_gaussianization,
+    forward_inversecdf,
     inverse_gaussianization,
 )
 

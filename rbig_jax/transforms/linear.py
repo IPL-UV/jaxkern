@@ -1,6 +1,6 @@
 import collections
-
 from functools import partial
+
 import jax
 import jax.numpy as np
 
@@ -9,7 +9,26 @@ RotParams = collections.namedtuple("Params", ["projection"])
 
 @jax.jit
 def compute_projection(X: np.ndarray) -> np.ndarray:
-    """Compute PCA projection"""
+    """Compute PCA projection matrix
+    Using SVD, this computes the PCA components for
+    a dataset X and computes the projection matrix
+    needed to do the PCA decomposition.
+
+    Parameters
+    ----------
+    X : np.ndarray, (n_samples, n_features)
+        the data to calculate to PCA projection matrix
+    
+    Returns
+    -------
+    VT : np.ndarray, (n_features, n_features)
+        the projection matrix (V.T) for the PCA decomposition
+
+    Notes
+    -----
+    Can find the original implementation here:
+    https://bit.ly/2EBDV9o
+    """
 
     # center the data
     X = X - np.mean(X, axis=0)

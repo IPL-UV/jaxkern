@@ -1,18 +1,18 @@
 # JAX SETTINGS
 import jax
 import jax.numpy as np
-import numpy as onp
-from scipy.stats import beta
-
 # Plot Functions
 import matplotlib.pyplot as plt
+import numpy as onp
 import seaborn as sns
+from scipy.stats import beta
+
+from rbig_jax.data import get_classic
+from rbig_jax.transforms.linear import init_pca_params
 
 sns.reset_defaults()
 sns.set_context(context="talk", font_scale=0.7)
 
-from rbig_jax.data import get_classic
-from rbig_jax.transforms.linear import init_pca_params
 
 # =========================
 # Original Data

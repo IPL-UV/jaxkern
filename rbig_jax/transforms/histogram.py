@@ -1,7 +1,7 @@
 import collections
+from functools import partial
 from typing import Union
 
-from functools import partial
 import jax
 import jax.numpy as np
 
@@ -113,4 +113,3 @@ def get_params(
         np.log(np.interp(X, pdf_support, empirical_pdf)),
         Params(new_support, uniform_cdf, pdf_support, empirical_pdf),
     )
-

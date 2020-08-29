@@ -1,7 +1,7 @@
-import pytest
 import jax.numpy as np
-from src.quantiles import get_quantiles
+import pytest
 
+from src.quantiles import get_quantiles
 
 # def test_quantiles_1d():
 

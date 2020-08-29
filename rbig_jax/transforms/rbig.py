@@ -1,7 +1,9 @@
+from functools import partial
+
 import jax
 import jax.numpy as np
-from functools import partial
-from rbig_jax.transforms.gaussian import init_params_hist, get_gauss_params
+
+from rbig_jax.transforms.gaussian import get_gauss_params, init_params_hist
 from rbig_jax.transforms.linear import init_pca_params
 
 
@@ -56,4 +58,3 @@ def inverse_transform(X, apply_inv_mg, params, apply_inv_rot):
     X = apply_inv_rot(X)
     X = apply_inv_mg(X.T, params)
     return X.T
-
