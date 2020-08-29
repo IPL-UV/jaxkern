@@ -45,6 +45,7 @@ conda env update --file environment.yml
 ### Resources
 
 * Python Code - [github](https://github.com/jejjohnson/rbig)
+* RBIG applied to Earth Observation Data - [github](https://github.com/jejjohnson/rbig_eo)
 * Original Webpage - [ISP](http://isp.uv.es/rbig.html)
 * Original MATLAB Code - [webpage](http://isp.uv.es/code/featureextraction/RBIG_toolbox.zip)
 * Original Python Code - [github](https://github.com/spencerkent/pyRBIG)
