@@ -114,6 +114,19 @@ def main():
     # plot Gaussianized data
     plot_joint(X_transform, "red", title="Gaussianized Data", logger=True)
 
+    # ==============================
+    # Forward Transformation
+    # ==============================
+    X_transform = data
+    for i in range(wandb.config.n_layers):
+
+        X_transform, _ = forward_funcs[i](X_transform)
+    # plot Gaussianized data
+    plot_joint(X_transform, "orange", title="Gaussianized Data (Forward)", logger=True)
+
+    # ==============================
+    # Inverse Transformation
+    # ==============================
     # propagate through inverse function
     inv_funcs = inverse_funcs[::-1]
 
@@ -122,14 +135,34 @@ def main():
 
         X_approx = inv_funcs[i](X_approx)
 
-    plot_joint(X_approx, "orange", title="Inverse Transformation", logger=True)
+    plot_joint(X_approx, "blue", title="Inverse Transformation", logger=True)
+
+    # ==============================
+    # Sampling
+    # ==============================
+    # draw samples
+    gauss_samples = onp.random.randn(data.shape[0], data.shape[1])
+
+    X_approx = np.array(gauss_samples)
+
+    for i in range(wandb.config.n_layers):
+
+        X_approx = inv_funcs[i](X_approx)
+
+    plot_joint(X_approx, "green", title="Samples Drawn", logger=True)
+
+    # ==============================
+    # Stopping Criteria
+    # ==============================
     # Plot total correlation
     plot_total_corr(
         np.cumsum(np.array(it_red)),
         f"Information Reduction, TC:{np.sum(it_red):.4f}",
         logger=True,
     )
-
+    # ==============================
+    # Probability
+    # ==============================
     # Plot Log Probability
     log_probs = jax.scipy.stats.norm.logpdf(data) + X_ldj
 
@@ -147,15 +180,6 @@ def main():
     # clip probabilities
     probs_clipped = np.clip(probs, 0, 1)
     plot_joint_prob(data, probs_clipped, "Reds", title="Probability", logger=True)
-
-    # draw samples
-    gauss_samples = onp.random.randn(data.shape[0], data.shape[1])
-    X_approx = np.array(gauss_samples)
-    for i in range(wandb.config.n_layers):
-
-        X_approx = inv_funcs[i](X_approx)
-
-    plot_joint(X_approx, "green", title="Samples Drawn", logger=True)
 
 
 if __name__ == "__main__":
