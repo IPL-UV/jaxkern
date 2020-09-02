@@ -1,7 +1,7 @@
 name: jaxkern
 channels:
 - defaults
-dependences:
+dependencies:
 - python=3.8
 # Standard Libraries
 - numpy
