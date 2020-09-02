@@ -14,7 +14,7 @@ from setuptools import Command, find_packages, setup
 # Package meta-data.
 NAME = "jaxkern"
 DESCRIPTION = "Python similarity measures."
-URL = "https://github.com/ipl-uv/jax_kern"
+URL = "https://github.com/ipl-uv/jaxkern"
 EMAIL = "jemanjohnson34@gmail.com"
 AUTHOR = "J. Emmanuel Johnson"
 REQUIRES_PYTHON = ">=3.7.0"

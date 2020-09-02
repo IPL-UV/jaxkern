@@ -1,10 +1,8 @@
-from scripts.demo_rv import main
 import jax
 import jax.numpy as np
 import numpy as onp
 
-from src.kernels.utils import centering, gamma_from_sigma
-from src.kernels.utils.sigma import (
+from jaxkern.kernels.utils.sigma import (
     estimate_sigma_median,
     estimate_sigma_median_kth,
     scotts_factor,

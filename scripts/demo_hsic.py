@@ -2,10 +2,10 @@ import jax
 import jax.numpy as np
 import numpy as onp
 
-from src.kernels import covariance_matrix, gram, rbf_kernel
-from src.kernels.dependence import nhsic_cka, hsic, nhsic_ka, nhsic_cca
-from src.kernels.utils import centering, gamma_from_sigma
-from src.kernels.utils.sigma import estimate_sigma_median
+from jaxkern.kernels import covariance_matrix, gram, rbf_kernel
+from jaxkern.kernels.dependence import nhsic_cka, hsic, nhsic_ka, nhsic_cca
+from jaxkern.kernels.utils import centering, gamma_from_sigma
+from jaxkern.kernels.utils.sigma import estimate_sigma_median
 
 
 def main():

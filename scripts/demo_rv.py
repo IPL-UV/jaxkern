@@ -2,11 +2,7 @@ import jax
 import jax.numpy as np
 import numpy as onp
 
-from src.similarity.linear import rv_coeff, rv_coeff_features
-from src.kernels import covariance_matrix, gram, rbf_kernel, linear_kernel
-from src.kernels.dependence import centered_kernel_alignment, hsic, kernel_alignment
-from src.kernels.utils import centering, gamma_from_sigma
-from src.kernels.utils.sigma import estimate_sigma_median
+from jaxkern.similarity.linear import rv_coeff, rv_coeff_features
 
 
 def main():
