@@ -3,39 +3,35 @@ import jax
 import jax.numpy as np
 import numpy as onp
 
-from src.kernels import covariance_matrix, gram, rbf_kernel
-from src.kernels.dependence import centered_kernel_alignment, hsic, kernel_alignment
 from src.kernels.utils import centering, gamma_from_sigma
-from src.kernels.utils.sigma import estimate_sigma_median, estimate_sigma_median_percent
+from src.kernels.utils.sigma import (
+    estimate_sigma_median,
+    estimate_sigma_median_kth,
+    scotts_factor,
+    silvermans_factor,
+)
 
 
 def main():
     # generate some fake linear data
     onp.random.seed(123)
     X = onp.random.randn(1000, 2)
-    Y = 2 * X + 0.05 * onp.random.randn(1000, 2)
 
     # calculate the kernel matrix
-    sigma = estimate_sigma_median(X)  # estimate sigma value
-    print(sigma)
-    params = {"gamma": gamma_from_sigma(sigma)}
+    sigma = estimate_sigma_median(X, X)  # estimate sigma value
+    print(f"Median: {sigma:.4f}")
     # calculate the kernel matrix
-    sigma = estimate_sigma_median_percent(X, 0.4)  # estimate sigma value
-    print(sigma)
-    params = {"gamma": gamma_from_sigma(sigma)}
+    percent = 0.4
+    sigma = estimate_sigma_median_kth(X, X, percent)  # estimate sigma value
+    print(f"Median (percent={percent:.1f}): {sigma:.4f}")
 
-    # calculate hsic
+    # Scotts Method
+    sigma = scotts_factor(X)  # estimate sigma value
+    print(f"Scott: {sigma:.4f}")
 
-    hsic_value = hsic(X, Y, rbf_kernel, params, params)
-    print(hsic_value)
-
-    # calculate centered kernel alignment
-    cka_value = centered_kernel_alignment(X, Y, rbf_kernel, params, params)
-    print(cka_value)
-
-    # calculate kernel alignment
-    ka_value = kernel_alignment(X, Y, rbf_kernel, params, params)
-    print(ka_value)
+    # Silvermans method
+    sigma = silvermans_factor(X)  # estimate sigma value
+    print(f"Silverman: {sigma:.4f}")
 
 
 if __name__ == "__main__":
