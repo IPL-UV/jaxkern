@@ -1,0 +1,22 @@
+name: jaxkern
+channels:
+- defaults
+dependences:
+- python=3.8
+# Standard Libraries
+- numpy
+- scipy
+- scikit-learn
+- matplotlib
+- pip:
+  # Jax framework
+  - "git+https://github.com/google/jax.git"
+  - jaxlib
+  - "git+git://github.com/deepmind/chex.git"
+  # formatting
+  - black
+  - isort
+  - mypy
+  - pytest
+  # logging
+  - wandb
