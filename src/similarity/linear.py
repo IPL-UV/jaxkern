@@ -1,6 +1,7 @@
 import jax
 import jax.numpy as np
-from src.kernels import linear_kernel, covariance_matrix
+
+from src.kernels import covariance_matrix, linear_kernel
 from src.kernels.dependence import centered_kernel_alignment
 
 

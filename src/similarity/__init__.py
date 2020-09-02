@@ -1,4 +1,5 @@
 import jax.numpy as np
+
 from src.kernels.dist import distmat, sqeuclidean_distance
 
 
