@@ -5,6 +5,30 @@ from src.kernels import gram
 from src.kernels.utils import centering
 
 
+def nhsic_cca(X, Y, kernel, params_x, params_y, epsilon=1e-5):
+
+    n_samples = X.shape[0]
+
+    # kernel matrix
+    Kx = gram(kernel, params_x, X, X)
+    Ky = gram(kernel, params_y, Y, Y)
+
+    # center kernel matrices
+    Kx = centering(Kx)
+    Ky = centering(Ky)
+
+    K_id = np.eye(Kx.shape[0])
+    Kx_inv = np.linalg.inv(Kx + epsilon * n_samples * K_id)
+    Ky_inv = np.linalg.inv(Ky + epsilon * n_samples * K_id)
+
+    Rx = np.dot(Kx, Kx_inv)
+    Ry = np.dot(Ky, Ky_inv)
+
+    Pxy = np.mean(np.dot(Rx, Ry.T))
+
+    return Pxy
+
+
 def hsic(X, Y, kernel, params_x, params_y):
 
     # kernel matrix
@@ -23,7 +47,7 @@ def hsic(X, Y, kernel, params_x, params_y):
     return hsic_value
 
 
-def centered_kernel_alignment(X, Y, kernel, params_x, params_y):
+def nhsic_cka(X, Y, kernel, params_x, params_y):
 
     # calculate hsic normally
     Pxy = hsic(X, Y, kernel, params_x, params_y)
@@ -37,7 +61,7 @@ def centered_kernel_alignment(X, Y, kernel, params_x, params_y):
     return cka_value
 
 
-def kernel_alignment(X, Y, kernel, params_x, params_y):
+def nhsic_ka(X, Y, kernel, params_x, params_y):
 
     # calculate hsic normally
     Pxy = _hsic_uncentered(X, Y, kernel, params_x, params_y)
