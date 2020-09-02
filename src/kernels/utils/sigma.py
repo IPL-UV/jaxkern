@@ -14,15 +14,23 @@ def init_sigma_estimator(method="median", percent=None):
 
 
 def estimate_sigma_median(X):
+    # compute distance matrix
     dists = pdist_squareform(X, X)
+
     sigma = np.median(dists[np.nonzero(dists)])
     return sigma
 
 
-def estimate_sigma_median_percent(X):
+def estimate_sigma_median_percent(X, percent=0.3):
+
+    # compute distance matrix
     dists = pdist_squareform(X, X)
 
-    sigma = np.median(dists[np.nonzero(dists)])
+    # find the kth distance
+    sigma = kth_distance(dists=dists, percent=percent)
+
+    # median distances
+    sigma = np.median(sigma)
     return sigma
 
 
@@ -68,6 +76,17 @@ def silvermans_factor(X: np.ndarray) -> float:
     base = (n_samples * (n_features + 2.0)) / 4.0
 
     return np.power(base, -1 / (n_features + 4.0))
+
+
+def kth_distance(dists: np.ndarray, percent: float) -> np.ndarray:
+
+    # kth distance calculation (50%)
+    kth_sample = int(percent * dists.shape[0])
+
+    # take the Kth neighbours of that distance
+    k_dist = np.sort(dists)[:, kth_sample]
+
+    return k_dist
 
 
 # def estimate_sigma_k_median(X, percent=0.3):
