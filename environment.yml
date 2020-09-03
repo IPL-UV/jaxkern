@@ -1,16 +1,24 @@
-name: jaxrbig
+name: jaxkern
 channels:
-  - defaults
-  - conda-forge
+- defaults
+- conda-forge
 dependencies:
-  - python=3.8
-  - numpy
-  - matplotlib
-  - pytest
+- python=3.8
+# Standard Libraries
+- numpy=1.19
+- scipy=1.5
+- scikit-learn=0.23
+- matplotlib=3.3
+- pip
+- pip:
+  # Jax framework
+  - "git+https://github.com/google/jax.git"
+  - jaxlib
+  - "git+git://github.com/deepmind/chex.git"
+  # formatting
+  - black
+  - isort
   - mypy
-  - seaborn
-  - pip
-  - pip:
-    - "git+https://github.com/google/jax.git#egg=jax"
-    - jaxlib
-    - wandb
+  - pytest
+  # logging
+  - wandb
