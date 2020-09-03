@@ -1,4 +1,4 @@
-from src.kernels.dist import distmat, sqeuclidean_distance, pdist_squareform
+from jaxkern.kernels.dist import distmat, sqeuclidean_distance, pdist_squareform
 from sklearn.metrics.pairwise import euclidean_distances
 from scipy.spatial.distance import pdist, squareform
 import numpy as onp
