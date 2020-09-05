@@ -3,7 +3,7 @@ import functools
 import jax
 import jax.numpy as np
 
-from jaxkern.kernels.dist import sqeuclidean_distance
+from jaxkern.dist import sqeuclidean_distance
 
 
 @functools.partial(jax.jit, static_argnums=(0))
@@ -13,13 +13,18 @@ def gram(func, params, x, y):
     Parameters
     ----------
     func : Callable
+        a callable function
     params : Dict
+        the parameters needed for the kernel
     x : np.ndarray
+        input dataset (n_samples, n_features)
     y : np.ndarray
+        other input dataset (n_samples, n_features)
     
     Returns
     -------
     mat : np.ndarray
+        the gram matrix.
     
     Examples
     --------
@@ -40,6 +45,10 @@ def covariance_matrix(kernel_func, params, x, y):
 
 @functools.partial(jax.jit, static_argnums=(0))
 def linear_kernel(params, x, y):
+    """Linear kernel
+    
+    .. math:: k_i = \sum_i^N x_i-y_i
+    """
     return np.sum(x * y)
 
 

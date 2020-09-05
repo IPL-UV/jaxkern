@@ -1,15 +1,15 @@
 import jax
 import jax.numpy as np
 
-from src.kernels import covariance_matrix, linear_kernel
-from src.kernels.dependence import centered_kernel_alignment
+from jaxkern.kernels import covariance_matrix, linear_kernel
+from jaxkern.kernels.dependence import nhsic_cka
 
 
 def rv_coeff(X, Y):
 
-    return centered_kernel_alignment(X, Y, linear_kernel, {}, {})
+    return nhsic_cka(X, Y, linear_kernel, {}, {})
 
 
 def rv_coeff_features(X, Y):
 
-    return centered_kernel_alignment(X.T, Y.T, linear_kernel, {}, {})
+    return nhsic_cka(X.T, Y.T, linear_kernel, {}, {})

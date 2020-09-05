@@ -2,7 +2,7 @@ import jax
 import jax.numpy as np
 
 from jaxkern.kernels import gram
-from jaxkern.kernels.utils import centering
+from jaxkern.utils import centering
 
 jax_np = jax.numpy.ndarray
 
