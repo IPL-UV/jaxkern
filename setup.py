@@ -32,6 +32,7 @@ EXTRAS = {
     "dev": ["black", "isort", "mypy"],
     "tests": ["pytest", "scikit-learn"],
     "extras": ["matplotlib"],
+    "docs": ["sphinx_rtd_theme", "sphinx", "shinx-tabs"],
 }
 
 # The rest you shouldn't have to touch too much :)
