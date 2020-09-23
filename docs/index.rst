@@ -11,6 +11,7 @@ This is some example documentation.
    algorithms.rst
    api/api.rst
    notebooks/notebooks.rst
+   examples/examples.rst
 
 
 .. note:: 

@@ -1,13 +1,14 @@
+import jax
 import jax.numpy as np
 
 _float_eps = np.finfo("float").eps
 
 
-def _ensure_min_eps(x):
+def _ensure_min_eps(x: jax.numpy.ndarray) -> jax.numpy.ndarray:
     return np.maximum(_float_eps, x)
 
 
-def centering(kernel_mat: np.ndarray) -> np.ndarray:
+def centering(kernel_mat: jax.numpy.ndarray) -> jax.numpy.ndarray:
     """Calculates the centering matrix for the kernel"""
     n_samples = np.shape(kernel_mat)[0]
 
@@ -20,9 +21,9 @@ def centering(kernel_mat: np.ndarray) -> np.ndarray:
     return kernel_mat
 
 
-def sigma_from_gamma(gamma=0.1):
+def sigma_from_gamma(gamma: float = 0.1) -> float:
     return _ensure_min_eps(np.sqrt(1.0 / (2 * gamma)))
 
 
-def gamma_from_sigma(sigma=0.1):
+def gamma_from_sigma(sigma: float = 0.1) -> float:
     return _ensure_min_eps(1.0 / (2 * sigma ** 2))

@@ -21,25 +21,13 @@ conda:  ## setup a conda environment
 		${CONDA} create env create -f environment.yml
 		@printf "\n\nConda environment created! \033[1;34mRun \`conda activate ${NAME}\` to activate it.\033[0m\n\n\n"
 
-conda_dev:  ## setup a conda environment for development
-		@printf "Creating conda dev environment...\n"
-		${CONDA} create env create -f environment_dev.yml
-		@printf "\n\nConda dev environment created! \033[1;34mRun \`conda activate ${NAME}\` to activate it.\033[0m\n\n\n"
-
 ##@ Update Environments
-
 envupdate: ## update conda environment
 		@printf "Updating conda environment...\n"
-		${CONDA} env update -f environment.yml
+		${CONDA} env update -f environment.yml --prune
 		@printf "Conda environment updated!"
-	
-envupdatedev: ## update conda environment
-		@printf "Updating conda dev environment...\n"
-		${CONDA} env update -f environment_dev.yml
-		@printf "Conda dev environment updated!"
 
 ##@ Formatting
-
 black:  ## Format code in-place using black.
 		black ${PKGROOT}/ tests/ -l 79 .
 
@@ -49,6 +37,7 @@ format: ## Code styling - black, isort
 		isort ${PKGROOT}/ tests;
 		@printf "\033[1;34misort passes!\033[0m\n\n"
 
+##@ styling
 style:  ## Code lying - pylint
 		@printf "Checking code style with flake8...\n"
 		flake8 ${PKGROOT}/
@@ -61,25 +50,18 @@ lint: format style types  ## Lint code using pydocstyle, black, pylint and mypy.
 check: lint test  # Both lint and test code. Runs `make lint` followed by `make test`.
 
 ##@ Type Checking
-
 types:	## Type checking with mypy
 		@printf "Checking code type signatures with mypy...\n"
 		python -m mypy ${PKGROOT}/
 		@printf "\033[1;34mMypy passes!\033[0m\n\n"
 
 ##@ Testing
-
 test:  ## Test code using pytest.
 		@printf "\033[1;34mRunning tests with pytest...\033[0m\n\n"
 		pytest -v jaxkern tests
 		@printf "\033[1;34mPyTest passes!\033[0m\n\n"
 
 ##@ Notebooks
-notebooks: notebooks/* # Convert notebooks to html files
-		jupyter nbconvert --config nbconfig.py --execute --ExecutePreprocessor.kernel_name="pymc4-dev" --ExecutePreprocessor.timeout=1200
-		rm notebooks/*.html
-
-# JUPYTER NOTEBOOKS
 notebooks_to_docs: ## Move notebooks to docs notebooks directory
 		@printf "\033[1;34mCreating notebook directory...\033[0m\n"
 		mkdir -p docs/notebooks
