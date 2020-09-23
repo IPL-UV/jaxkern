@@ -4,7 +4,6 @@ jaxkern API
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-   :hidden:
 
    dependence.rst
    dist.rst

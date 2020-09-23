@@ -13,7 +13,8 @@ This is some example documentation.
    notebooks/notebooks.rst
 
 
-**Note**: Still a work in progress!
+.. note:: 
+   Still a work in progress!
 
 - **Git repository:** http://github.com/IPL-UV/jaxkern
 - **Documentation:** http://jaxkern.readthedocs.io
