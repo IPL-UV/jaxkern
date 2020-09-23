@@ -1,9 +1,9 @@
 import jax
 import jax.numpy as np
 
-from jaxkern.kernels import linear_kernel
 from jaxkern.dependence import nhsic_cka
 from jaxkern.dist import distmat, sqeuclidean_distance
+from jaxkern.kernels import linear_kernel
 
 
 def rv_coeff(X, Y):

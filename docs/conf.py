@@ -28,7 +28,7 @@ release = "0.0.1"
 
 # -- General configuration ---------------------------------------------------
 # By default, highlight as Python 3.
-highlight_language = "python3"
+highlight_language = "none"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -42,6 +42,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
     "sphinx_tabs.tabs",
+    "nbsphinx",
 ]
 
 # Napoleon settings
@@ -54,7 +55,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ["_build", "**.ipynb_checkpoints"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -64,7 +65,7 @@ exclude_patterns = []
 #
 
 # Required theme setup
-html_theme = "sphinx_material"
+html_theme = "sphinx_rtd_theme"
 
 # Set link name generated in the top bar.
 html_title = "Jaxkern"

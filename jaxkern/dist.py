@@ -30,13 +30,12 @@ def distmat(func: Callable, x: np.ndarray, y: np.ndarray) -> np.ndarray:
 @jax.jit
 def pdist_squareform(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """squared euclidean distance matrix
-    
+
     Notes
     -----
     This is equivalent to the scipy commands
-    
+
     >>> from scipy.spatial.distance import pdist, squareform
     >>> dists = squareform(pdist(X, metric='sqeuclidean')
     """
     return distmat(sqeuclidean_distance, x, y)
-

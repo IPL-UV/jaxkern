@@ -20,12 +20,12 @@ def gram(func, params, x, y):
         input dataset (n_samples, n_features)
     y : np.ndarray
         other input dataset (n_samples, n_features)
-    
+
     Returns
     -------
     mat : np.ndarray
         the gram matrix.
-    
+
     Examples
     --------
 
@@ -46,7 +46,7 @@ def covariance_matrix(kernel_func, params, x, y):
 @functools.partial(jax.jit, static_argnums=(0))
 def linear_kernel(params, x, y):
     """Linear kernel
-    
+
     .. math:: k_i = \sum_i^N x_i-y_i
     """
     return np.sum(x * y)

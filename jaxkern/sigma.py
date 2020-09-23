@@ -6,14 +6,14 @@ from jaxkern.dist import pdist_squareform
 
 def estimate_sigma_median(X: jax.numpy.ndarray, Y: jax.numpy.ndarray) -> float:
     """Estimate sigma using the median
-    
+
     Parameters
     ----------
     X : jax.numpy.ndarray
         input data (n_samples, n_features)
     Y : jax.numpy.ndarray
         input data (n_samples, n_features)
-    
+
     Returns
     -------
     sigma : float
@@ -47,7 +47,7 @@ def estimate_sigma_median_kth(
 
 
 def scotts_factor(X: jax.numpy.ndarray) -> float:
-    """Scotts Method to estimate the length scale of the 
+    """Scotts Method to estimate the length scale of the
     rbf kernel.
 
         factor = n**(-1./(d+4))

@@ -33,7 +33,7 @@ def nhsic_cca(X, Y, kernel, params_x, params_y, epsilon=1e-5):
 
 def hsic(X, Y, kernel, params_x, params_y):
     """Calculates the HSIC similarity metric
-    
+
     Parameters
     ----------
     X : jax.numpy.ndarray

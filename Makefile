@@ -44,9 +44,9 @@ black:  ## Format code in-place using black.
 		black ${PKGROOT}/ tests/ -l 79 .
 
 format: ## Code styling - black, isort
-		black --check --diff ${PKGROOT} tests
+		black ${PKGROOT}/ tests;
 		@printf "\033[1;34mBlack passes!\033[0m\n\n"
-		isort ${PKGROOT}/ tests/
+		isort ${PKGROOT}/ tests;
 		@printf "\033[1;34misort passes!\033[0m\n\n"
 
 style:  ## Code lying - pylint
@@ -71,15 +71,13 @@ types:	## Type checking with mypy
 
 test:  ## Test code using pytest.
 		@printf "\033[1;34mRunning tests with pytest...\033[0m\n\n"
-		pytest -v rbig tests
+		pytest -v jaxkern tests
 		@printf "\033[1;34mPyTest passes!\033[0m\n\n"
 
 ##@ Notebooks
-
 notebooks: notebooks/* # Convert notebooks to html files
 		jupyter nbconvert --config nbconfig.py --execute --ExecutePreprocessor.kernel_name="pymc4-dev" --ExecutePreprocessor.timeout=1200
 		rm notebooks/*.html
-
 
 # JUPYTER NOTEBOOKS
 notebooks_to_docs: ## Move notebooks to docs notebooks directory
@@ -90,31 +88,9 @@ notebooks_to_docs: ## Move notebooks to docs notebooks directory
 		@printf "\033[1;34mCopying Notebooks to directory...\033[0m\n"
 		cp notebooks/*.ipynb docs/notebooks
 		@printf "\033[1;34mDone!\033[0m\n"
-jlab_html:
-		mkdir -p docs/notebooks
-		jupyter nbconvert notebooks/*.ipynb --to html --output-dir docs/notebooks/
 
 ##@ Documentation
+livehtml: notebooks_to_docs ## Build mkdocs documentation live
+		@printf "\033[1;34mStarting live docs with sphinx-autobuild...\033[0m\n"
+		sphinx-autobuild ${ROOT}/docs ${ROOT}/docs/_build/html --port 8802
 
-pdoc:	## Generate python API Documentation with pdoc
-		@printf "\033[1;34mCreating python API documentation with pdoc...\033[0m\n"
-		pdoc --html --overwrite ${PKGROOT} --html-dir docs/
-		@ touch $@
-		@printf "\033[1;34mpdoc completed!\033[0m\n\n"
-
-pdoc-live: ## Start python API live documentation
-		@printf "\033[1;34mStarting live documentation with pdoc...\033[0m\n"
-		pdoc ${PKGROOT} --http localhost:8801
-
-mkdocs: notebooks_to_docs ## Build site documentation with mkdocs
-		@printf "\033[1;34mCreating full documentation with mkdocs...\033[0m\n"
-		mkdocs build --config-file mkdocs.yml --clean --theme readthedocs --site-dir site/
-		@printf "\033[1;34mmkdocs completed!\033[0m\n\n"
-
-mkdocs-live: notebooks_to_docs ## Build mkdocs documentation live
-		@printf "\033[1;34mStarting live docs with mkdocs...\033[0m\n"
-		mkdocs serve --dev-addr localhost:8802 --theme material
-
-mkdocs-live-d: notebooks_to_docs ## Build mkdocs documentation live (quicker reload)
-		@printf "\033[1;34mStarting live docs with mkdocs...\033[0m\n"
-		mkdocs serve --dev-addr localhost:8802 --dirtyreload --theme material
