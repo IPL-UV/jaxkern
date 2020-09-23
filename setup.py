@@ -32,7 +32,7 @@ EXTRAS = {
     "dev": ["black", "isort", "mypy"],
     "tests": ["pytest", "scikit-learn"],
     "extras": ["matplotlib"],
-    "docs": ["sphinx_rtd_theme", "sphinx", "sphinx-tabs"],
+    "docs": ["sphinx_rtd_theme", "sphinx", "sphinx-tabs", "nbsphinx", "pandoc"],
 }
 
 # The rest you shouldn't have to touch too much :)

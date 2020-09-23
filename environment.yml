@@ -9,6 +9,12 @@ dependencies:
 - scipy=1.5
 - scikit-learn=0.23
 - matplotlib=3.3
+# Documentation
+- conda-forge::nbsphinx
+- conda-forge::sphinx
+- conda-forge::pandoc
+- conda-forge::ipykernel
+- conda-forge::ipython
 - pip
 - pip:
   # Jax framework
@@ -22,3 +28,8 @@ dependencies:
   - pytest
   # logging
   - wandb
+  # documentation
+  - sphinx
+  - sphinx-tabs
+  - sphinx_rtd_theme
+  - sphinx-autobuild
