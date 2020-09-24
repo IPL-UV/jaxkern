@@ -5,8 +5,9 @@ Notebooks
    :maxdepth: 1
    :caption: Table of Contents   
    
-   example.ipynb
-   example_2.ipynb
+   demo_measures.ipynb
+   hsic_measures.ipynb
+   estimate_sigma.ipynb
 
 .. .. toctree::
 ..    :maxdepth: 2
