@@ -3,5 +3,5 @@ Distances
 
 .. automodule:: jaxkern.dist
    :members:
-   :undoc-members:
+   :inherited-members:
    :show-inheritance:

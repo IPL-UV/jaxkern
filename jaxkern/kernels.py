@@ -122,9 +122,9 @@ def rbf_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.nda
     .. math::
 
         k(\mathbf{x,y}) = \\
-           \\exp \left( - \\
-           \\frac{||\\mathbf{x} - \\mathbf{y}||^2_2\\
-           }{2 \sigma^2} \\right) 
+           \\exp \left( - \\gamma\\
+           ||\\mathbf{x} - \\mathbf{y}||^2_2\\
+            \\right) 
 
 
     Parameters

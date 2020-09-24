@@ -3,5 +3,5 @@ Sigma
 
 .. automodule:: jaxkern.sigma
    :members:
-   :undoc-members:
+   :inherited-members:
    :show-inheritance:

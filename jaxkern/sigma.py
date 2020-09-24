@@ -2,6 +2,7 @@ import jax
 import jax.numpy as np
 
 from jaxkern.dist import pdist_squareform
+from jaxkern.utils import ensure_min_eps
 
 
 def estimate_sigma_median(X: np.ndarray, Y: np.ndarray) -> float:
@@ -189,3 +190,23 @@ def kth_percent_distance(dists: np.ndarray, k: float = 0.3) -> np.ndarray:
     k_dist = np.sort(dists)[:, kth_sample]
 
     return k_dist
+
+
+def gamma_to_sigma(gamma: float = 1.0) -> float:
+    """Convert sigma to gamma
+
+    .. math::
+
+        \\sigma = \\frac{1}{\\sqrt{2 \\gamma}}
+    """
+    return ensure_min_eps(np.sqrt(1.0 / (2 * gamma)))
+
+
+def sigma_to_gamma(sigma: float = 0.1) -> float:
+    """Convert sigma to gamma
+
+    .. math::
+
+        \\gamma = \\frac{1}{2 \\sigma^2}
+    """
+    return ensure_min_eps(1.0 / (2 * sigma ** 2))

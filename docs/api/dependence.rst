@@ -3,5 +3,5 @@ Dependence
 
 .. automodule:: jaxkern.dependence
    :members:
-   :undoc-members:
+   :inherited-members:
    :show-inheritance:

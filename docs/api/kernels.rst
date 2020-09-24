@@ -3,5 +3,5 @@ Kernels
 
 .. automodule:: jaxkern.kernels
    :members:
-   :undoc-members:
+   :inherited-members:
    :show-inheritance:

@@ -68,7 +68,7 @@ notebooks_to_docs: ## Move notebooks to docs notebooks directory
 		@printf "\033[1;34mRemoving old notebooks...\033[0m\n"
 		rm -rf docs/notebooks/*.ipynb
 		@printf "\033[1;34mCopying Notebooks to directory...\033[0m\n"
-		cp notebooks/*.ipynb docs/notebooks
+		cp notebooks/docs/*.ipynb docs/notebooks
 		@printf "\033[1;34mDone!\033[0m\n"
 
 ##@ Documentation
