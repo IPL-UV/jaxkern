@@ -23,10 +23,10 @@ def estimate_sigma_median(X: np.ndarray, Y: np.ndarray) -> float:
     dists = pdist_squareform(X, Y)
 
     # remove non-zero elements
-    dists = dists[np.nonzero(dists)]
+    # dists = dists[np.nonzero(dists)]
 
     # get the median value
-    sigma = np.median(dists)
+    sigma = np.median(dists[np.nonzero(dists)])
 
     return sigma
 
@@ -55,10 +55,10 @@ def estimate_sigma_mean_kth(
     """
 
     # find the kth distance
-    sigma = _estimate_sigma_kth(X=X, percent=percent)
+    dists = _estimate_sigma_kth(X=X, Y=Y, percent=percent)
 
     # median distances
-    sigma = np.mean(sigma)
+    sigma = np.mean(dists[np.nonzero(dists)])
     return sigma
 
 
@@ -86,10 +86,10 @@ def estimate_sigma_median_kth(
     """
 
     # find the kth distance
-    sigma = _estimate_sigma_kth(X=X, percent=percent)
+    dists = _estimate_sigma_kth(X=X, Y=Y, percent=percent)
 
     # median distances
-    sigma = np.median(sigma)
+    sigma = np.median(dists[np.nonzero(dists)])
     return sigma
 
 
@@ -101,7 +101,7 @@ def _estimate_sigma_kth(
     dists = pdist_squareform(X, Y)
 
     # find the kth distance
-    sigma = kth_percent_distance(dists=dists, percent=percent)
+    sigma = kth_percent_distance(dists=dists, k=percent)
     return sigma
 
 

@@ -16,14 +16,14 @@ def centering(kernel_mat: jax.numpy.ndarray) -> jax.numpy.ndarray:
 
     H = identity - (1.0 / n_samples) * np.ones((n_samples, n_samples))
 
-    kernel_mat = np.dot(kernel_mat, H)
+    kernel_mat = np.einsum("ij,jk,kl->il", H, kernel_mat, H)
 
     return kernel_mat
 
 
-def sigma_from_gamma(gamma: float = 0.1) -> float:
+def gamma_to_sigma(gamma: float = 0.1) -> float:
     return _ensure_min_eps(np.sqrt(1.0 / (2 * gamma)))
 
 
-def gamma_from_sigma(sigma: float = 0.1) -> float:
+def sigma_to_gamma(sigma: float = 0.1) -> float:
     return _ensure_min_eps(1.0 / (2 * sigma ** 2))
