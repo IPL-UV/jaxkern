@@ -1,3 +1,4 @@
+from jaxkern.dist import sqeuclidean_distance
 from typing import Callable, Dict
 import jax
 import jax.numpy as np
@@ -54,36 +55,10 @@ def hsic(
     # kernel matrix
     Kx = covariance_matrix(kernel, params_x, X, X)
     Ky = covariance_matrix(kernel, params_y, Y, Y)
-    # print(Kx.min(), Kx.max(), Ky.min(), Ky.max())
-    # # print(Kx.min(), Kx.max(), Ky.min(), Ky.max())
-
-    # import matplotlib.pyplot as plt
-
-    # plt.imshow(Kx)
-    # plt.colorbar()
-    # plt.show()
-
-    # # center kernel matrices
-    # n_samples = Kx.shape[0]
-    # H = np.eye(n_samples) - (1.0 / n_samples) * np.ones((n_samples, n_samples))
-    # Kx_ = np.dot(Kx, H)
-    # Ky_ = np.dot(Ky, H)
-    # print(Kx_.min(), Kx_.max(), Ky_.min(), Ky_.max())
 
     Kx = centering(Kx)
     Ky = centering(Ky)
-    # print(Kx.min(), Kx.max(), Ky.min(), Ky.max())
 
-    # import matplotlib.pyplot as plt
-
-    # plt.imshow(Kx)
-    # plt.colorbar()
-    # plt.show()
-    #
-    # K = np.dot(Kx, Ky.T)
-    # print(K.min(), K.max())
-
-    # return np.mean(K)
     hsic_value = np.sum(Kx * Ky)
     if bias:
         bias = 1 / (Kx.shape[0] ** 2)
@@ -305,13 +280,15 @@ def mmd_mi(
     return mmd_value
 
 
-def mmd_centered(
+def mmd(
     X: np.ndarray,
     Y: np.ndarray,
     kernel: Callable,
     params_x: Dict[str, float],
     params_y: Dict[str, float],
     params_xy: Dict[str, float],
+    bias: bool = False,
+    center: bool = False,
 ) -> float:
     """Maximum Mean Discrepancy
 
@@ -327,19 +304,24 @@ def mmd_centered(
 
         This method is equivalent to the HSIC method.
     """
-    # calculate kernel matrices
+    n_samples, m_samples = X.shape[0], Y.shape[0]
+
+    # constants
+    a00 = 1.0 / (n_samples * (n_samples - 1.0))
+    a11 = 1.0 / (m_samples * (m_samples - 1.0))
+    a01 = -1.0 / (n_samples * m_samples)
+
+    # kernel matrices
     Kx = gram(kernel, params_x, X, X)
     Ky = gram(kernel, params_y, Y, Y)
     Kxy = gram(kernel, params_xy, X, Y)
 
-    # center kernel matrices
-    Kx = centering(Kx)
-    Ky = centering(Ky)
-    Kxy = centering(Kxy)
-
-    #
-    K = np.dot(Kx, Ky.T)
-
-    hsic_value = np.mean(K)
-
-    return hsic_value
+    if bias:
+        mmd = np.mean(Kx) + np.mean(Ky) - 2 * np.mean(Kxy)
+        return np.where(mmd >= 0.0, np.sqrt(mmd), 0.0)
+    else:
+        return (
+            2 * a01 * np.mean(Kxy)
+            + a00 * (np.sum(Kx) - n_samples)
+            + a11 * (np.sum(Ky) - m_samples)
+        )
