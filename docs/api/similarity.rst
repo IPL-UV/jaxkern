@@ -3,5 +3,5 @@ Similarity
 
 .. automodule:: jaxkern.similarity
    :members:
-   :undoc-members:
+   :inherited-members:
    :show-inheritance:

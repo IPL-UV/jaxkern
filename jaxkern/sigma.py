@@ -2,6 +2,7 @@ import jax
 import jax.numpy as np
 
 from jaxkern.dist import pdist_squareform
+from jaxkern.utils import ensure_min_eps
 
 
 def estimate_sigma_median(X: np.ndarray, Y: np.ndarray) -> float:
@@ -23,10 +24,10 @@ def estimate_sigma_median(X: np.ndarray, Y: np.ndarray) -> float:
     dists = pdist_squareform(X, Y)
 
     # remove non-zero elements
-    dists = dists[np.nonzero(dists)]
+    # dists = dists[np.nonzero(dists)]
 
     # get the median value
-    sigma = np.median(dists)
+    sigma = np.median(dists[np.nonzero(dists)])
 
     return sigma
 
@@ -55,10 +56,10 @@ def estimate_sigma_mean_kth(
     """
 
     # find the kth distance
-    sigma = _estimate_sigma_kth(X=X, percent=percent)
+    dists = _estimate_sigma_kth(X=X, Y=Y, percent=percent)
 
     # median distances
-    sigma = np.mean(sigma)
+    sigma = np.mean(dists[np.nonzero(dists)])
     return sigma
 
 
@@ -86,10 +87,10 @@ def estimate_sigma_median_kth(
     """
 
     # find the kth distance
-    sigma = _estimate_sigma_kth(X=X, percent=percent)
+    dists = _estimate_sigma_kth(X=X, Y=Y, percent=percent)
 
     # median distances
-    sigma = np.median(sigma)
+    sigma = np.median(dists[np.nonzero(dists)])
     return sigma
 
 
@@ -101,7 +102,7 @@ def _estimate_sigma_kth(
     dists = pdist_squareform(X, Y)
 
     # find the kth distance
-    sigma = kth_percent_distance(dists=dists, percent=percent)
+    sigma = kth_percent_distance(dists=dists, k=percent)
     return sigma
 
 
@@ -189,3 +190,23 @@ def kth_percent_distance(dists: np.ndarray, k: float = 0.3) -> np.ndarray:
     k_dist = np.sort(dists)[:, kth_sample]
 
     return k_dist
+
+
+def gamma_to_sigma(gamma: float = 1.0) -> float:
+    """Convert sigma to gamma
+
+    .. math::
+
+        \\sigma = \\frac{1}{\\sqrt{2 \\gamma}}
+    """
+    return ensure_min_eps(np.sqrt(1.0 / (2 * gamma)))
+
+
+def sigma_to_gamma(sigma: float = 0.1) -> float:
+    """Convert sigma to gamma
+
+    .. math::
+
+        \\gamma = \\frac{1}{2 \\sigma^2}
+    """
+    return ensure_min_eps(1.0 / (2 * sigma ** 2))

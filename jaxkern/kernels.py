@@ -6,7 +6,7 @@ import jax.numpy as np
 from jaxkern.dist import sqeuclidean_distance
 
 
-@functools.partial(jax.jit, static_argnums=(0))
+# @functools.partial(jax.jit, static_argnums=(0))
 def gram(
     func: Callable,
     params: Dict,
@@ -43,7 +43,6 @@ def gram(
     return jax.vmap(lambda x1: jax.vmap(lambda y1: func(params, x1, y1))(y))(x)
 
 
-@functools.partial(jax.jit, static_argnums=(0))
 def covariance_matrix(
     func: Callable,
     params: Dict[str, float],
@@ -87,14 +86,11 @@ def covariance_matrix(
 
     >>> covariance_matrix(kernel_rbf, {"gamma": 1.0}, X, Y)
     """
-    mapx1 = jax.vmap(
-        lambda x, y: kernel_func(params, x, y), in_axes=(0, None), out_axes=0
-    )
+    mapx1 = jax.vmap(lambda x, y: func(params, x, y), in_axes=(0, None), out_axes=0)
     mapx2 = jax.vmap(lambda x, y: mapx1(x, y), in_axes=(None, 0), out_axes=1)
     return mapx2(x, y)
 
 
-@functools.partial(jax.jit, static_argnums=(0))
 def linear_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Linear kernel
 
@@ -118,7 +114,6 @@ def linear_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.
     return np.sum(x * y)
 
 
-@jax.jit
 def rbf_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Radial Basis Function (RBF) Kernel.
 
@@ -127,9 +122,9 @@ def rbf_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.nda
     .. math::
 
         k(\mathbf{x,y}) = \\
-           \\exp \left( - \\
-           \\frac{||\\mathbf{x} - \\mathbf{y}||^2_2\\
-           }{2 \sigma^2} \\right) 
+           \\exp \left( - \\gamma\\
+           ||\\mathbf{x} - \\mathbf{y}||^2_2\\
+            \\right) 
 
 
     Parameters
@@ -154,7 +149,6 @@ def rbf_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.nda
 
 
 # ARD Kernel
-@jax.jit
 def ard_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Automatic Relevance Determination (ARD) Kernel.
 
@@ -198,7 +192,6 @@ def ard_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.nda
 
 
 # Rational Quadratic Kernel
-@jax.jit
 def rq_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Rational Quadratic Function (RQF) Kernel.
 
