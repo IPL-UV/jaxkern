@@ -1,7 +1,7 @@
 # Kernel Methods with Jax
 
 * Authors: J. Emmanuel Johnson, ISP-Lab
-* Repo: [https://github.com/jejjohnson/jaxkern.git](https://github.com/jejjohnson/jaxkern.git)
+* Repo: [github.com/IPL-UV/jaxkern](https://github.com/IPL-UV/jaxkern)
 * Website: [jaxkern.readthedocs.io](https://jaxkern.readthedocs.io/en/latest/)
 
 ## Description
