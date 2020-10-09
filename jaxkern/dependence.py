@@ -3,7 +3,7 @@ from typing import Callable, Dict
 import jax
 import jax.numpy as np
 
-from jaxkern.kernels import gram, covariance_matrix
+from jaxkern.kernels.utils import gram, covariance_matrix
 from jaxkern.utils import centering
 
 jax_np = jax.numpy.ndarray
@@ -418,5 +418,3 @@ def mmd(
             + a00 * (np.sum(Kx) - n_samples)
             + a11 * (np.sum(Ky) - m_samples)
         )
-
-

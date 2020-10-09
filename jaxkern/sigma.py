@@ -27,7 +27,8 @@ def estimate_sigma_median(X: np.ndarray, Y: np.ndarray) -> float:
     # dists = dists[np.nonzero(dists)]
 
     # get the median value
-    sigma = np.median(dists[np.nonzero(dists)])
+    dists = np.clip(dists, a_min=1e-5, a_max=np.inf)
+    sigma = np.median(dists)
 
     return sigma
 

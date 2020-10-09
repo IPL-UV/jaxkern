@@ -2,6 +2,7 @@ import functools
 from typing import Optional, Callable, Dict
 import jax
 import jax.numpy as np
+import objax
 
 from jaxkern.dist import sqeuclidean_distance
 

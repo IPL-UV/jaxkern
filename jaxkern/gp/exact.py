@@ -1,150 +1,186 @@
 from functools import partial
 from typing import Callable, Dict, Tuple
-
+import objax
 import jax
-import jax.numpy as jnp
-
+import jax.numpy as np
+from tensorflow_probability.substrates.jax import distributions as tfd
 from jaxkern.gp.utils import get_factorizations
 
 
-def gp_prior(
-    params: Dict, mu_f: Callable, cov_f: Callable, x: jnp.ndarray
-) -> Tuple[jnp.ndarray, jnp.ndarray]:
-    return mu_f(x), cov_f(params, x, x)
+class ExactGP(objax.Module):
+    def __init__(self, mean, kernel, noise: float = 0.1, jitter: float = 1e-5):
+
+        # MEAN FUNCTION
+        self.mean = mean
+
+        # KERNEL Function
+        self.kernel = kernel
+
+        # noise level
+        self.noise = objax.TrainVar(np.array([noise]))
+
+        # jitter (make it correctly conditioned)
+        self.jitter = jitter
+
+    def forward(self, X: np.ndarray) -> np.ndarray:
+
+        # mean function
+        mu = self.mean(X)
+
+        # kernel function
+        cov = self.kernel(X, X)
+
+        # noise model
+        cov += jax.nn.softplus(self.noise.value) * np.eye(X.shape[0])
+
+        # jitter
+        cov += self.jitter * np.eye(X.shape[0])
+
+        # calculate cholesky
+        cov_chol = np.linalg.cholesky(cov)
+
+        # gaussian process likelihood
+        return tfd.MultivariateNormalTriL(loc=mu, scale_tril=cov_chol)
 
 
-@partial(jax.jit, static_argnums=(0, 1, 2, 3, 5, 6))
-def posterior(
-    params: Dict,
-    prior_params: Tuple[Callable, Callable],
-    X: jnp.ndarray,
-    Y: jnp.ndarray,
-    X_new: jnp.ndarray,
-    likelihood_noise: bool = False,
-    return_cov: bool = False,
-) -> Tuple[jnp.ndarray, jnp.ndarray]:
-    (mu_func, cov_func) = prior_params
-
-    # ==============================
-    # Get Factorizations (L, alpha)
-    # ==============================
-    L, alpha = get_factorizations(
-        params=params,
-        prior_params=prior_params,
-        X=X,
-        Y=Y,
-        X_new=X_new,
-    )
-
-    # ================================
-    # 4. PREDICTIVE MEAN DISTRIBUTION
-    # ================================
-
-    # calculate transform kernel
-    KxX = cov_func(params, X_new, X)
-
-    # Calculate the Mean
-    mu_y = jnp.dot(KxX, alpha)
-
-    # =====================================
-    # 5. PREDICTIVE COVARIANCE DISTRIBUTION
-    # =====================================
-    v = jax.scipy.linalg.cho_solve(L, KxX.T)
-
-    # Calculate kernel matrix for inputs
-    Kxx = cov_func(params, X_new, X_new)
-
-    cov_y = Kxx - jnp.dot(KxX, v)
-
-    # Likelihood Noise
-    if likelihood_noise is True:
-        cov_y += params["likelihood_noise"]
-
-    # return variance (diagonals of covaraince)
-    if return_cov is not True:
-        cov_y = jnp.diag(cov_y)
-
-    return mu_y, cov_y
+# def gp_prior(
+#     params: Dict, mu_f: Callable, cov_f: Callable, x: jnp.ndarray
+# ) -> Tuple[np.ndarray, np.ndarray]:
+#     return mu_f(x), cov_f(params, x, x)
 
 
-@partial(jax.jit, static_argnums=(0, 1, 2, 3))
-def predictive_mean(
-    params: Dict,
-    prior_params: Tuple[Callable, Callable],
-    X: jnp.ndarray,
-    Y: jnp.ndarray,
-    X_new: jnp.ndarray,
-) -> jnp.ndarray:
+# @partial(jax.jit, static_argnums=(0, 1, 2, 3, 5, 6))
+# def posterior(
+#     params: Dict,
+#     prior_params: Tuple[Callable, Callable],
+#     X: np.ndarray,
+#     Y: np.ndarray,
+#     X_new: np.ndarray,
+#     likelihood_noise: bool = False,
+#     return_cov: bool = False,
+# ) -> Tuple[np.ndarray, np.ndarray]:
+#     (mu_func, cov_func) = prior_params
 
-    (_, cov_func) = prior_params
+#     # ==============================
+#     # Get Factorizations (L, alpha)
+#     # ==============================
+#     L, alpha = get_factorizations(
+#         params=params,
+#         prior_params=prior_params,
+#         X=X,
+#         Y=Y,
+#         X_new=X_new,
+#     )
 
-    # ==============================
-    # Get Factorizations (L, alpha)
-    # ==============================
-    L, alpha = get_factorizations(
-        params=params,
-        prior_params=prior_params,
-        X=X,
-        Y=Y,
-        X_new=X_new,
-    )
+#     # ================================
+#     # 4. PREDICTIVE MEAN DISTRIBUTION
+#     # ================================
 
-    # ================================
-    # 4. PREDICTIVE MEAN DISTRIBUTION
-    # ================================
+#     # calculate transform kernel
+#     KxX = cov_func(params, X_new, X)
 
-    # calculate transform kernel
-    KxX = cov_func(params, X_new, X)
+#     # Calculate the Mean
+#     mu_y = jnp.dot(KxX, alpha)
 
-    # Calculate the Mean
-    mu_y = jnp.dot(KxX, alpha)
+#     # =====================================
+#     # 5. PREDICTIVE COVARIANCE DISTRIBUTION
+#     # =====================================
+#     v = jax.scipy.linalg.cho_solve(L, KxX.T)
 
-    return mu_y.squeeze()
+#     # Calculate kernel matrix for inputs
+#     Kxx = cov_func(params, X_new, X_new)
+
+#     cov_y = Kxx - jnp.dot(KxX, v)
+
+#     # Likelihood Noise
+#     if likelihood_noise is True:
+#         cov_y += params["likelihood_noise"]
+
+#     # return variance (diagonals of covaraince)
+#     if return_cov is not True:
+#         cov_y = jnp.diag(cov_y)
+
+#     return mu_y, cov_y
 
 
-@partial(jax.jit, static_argnums=(0, 1, 2, 3, 5, 6))
-def predictive_variance(
-    params: Dict,
-    prior_params: Tuple[Callable, Callable],
-    X: jnp.ndarray,
-    Y: jnp.ndarray,
-    X_new: jnp.ndarray,
-    likelihood_noise: bool = False,
-    return_cov: bool = False,
-) -> jnp.ndarray:
+# @partial(jax.jit, static_argnums=(0, 1, 2, 3))
+# def predictive_mean(
+#     params: Dict,
+#     prior_params: Tuple[Callable, Callable],
+#     X: jnp.ndarray,
+#     Y: jnp.ndarray,
+#     X_new: jnp.ndarray,
+# ) -> np.ndarray:
 
-    (mu_func, cov_func) = prior_params
+#     (_, cov_func) = prior_params
 
-    # ==============================
-    # Get Factorizations (L, alpha)
-    # ==============================
-    L, alpha = get_factorizations(
-        params=params,
-        prior_params=prior_params,
-        X=X,
-        Y=Y,
-        X_new=X_new,
-    )
+#     # ==============================
+#     # Get Factorizations (L, alpha)
+#     # ==============================
+#     L, alpha = get_factorizations(
+#         params=params,
+#         prior_params=prior_params,
+#         X=X,
+#         Y=Y,
+#         X_new=X_new,
+#     )
 
-    # =====================================
-    # 5. PREDICTIVE COVARIANCE DISTRIBUTION
-    # =====================================
+#     # ================================
+#     # 4. PREDICTIVE MEAN DISTRIBUTION
+#     # ================================
 
-    # calculate transform kernel
-    KxX = cov_func(params, X_new, X)
+#     # calculate transform kernel
+#     KxX = cov_func(params, X_new, X)
 
-    v = jax.scipy.linalg.cho_solve(L, KxX.T)
+#     # Calculate the Mean
+#     mu_y = jnp.dot(KxX, alpha)
 
-    # Calculate kernel matrix for inputs
-    Kxx = cov_func(params, X_new, X_new)
+#     return mu_y.squeeze()
 
-    cov_y = Kxx - jnp.dot(KxX, v)
 
-    # Likelihood Noise
-    if likelihood_noise is True:
-        cov_y += params["likelihood_noise"]
+# @partial(jax.jit, static_argnums=(0, 1, 2, 3, 5, 6))
+# def predictive_variance(
+#     params: Dict,
+#     prior_params: Tuple[Callable, Callable],
+#     X: jnp.ndarray,
+#     Y: jnp.ndarray,
+#     X_new: jnp.ndarray,
+#     likelihood_noise: bool = False,
+#     return_cov: bool = False,
+# ) -> np.ndarray:
 
-    # return variance (diagonals of covaraince)
-    if return_cov is not True:
-        cov_y = jnp.diag(cov_y)
-    return cov_y.squeeze()
+#     (mu_func, cov_func) = prior_params
+
+#     # ==============================
+#     # Get Factorizations (L, alpha)
+#     # ==============================
+#     L, alpha = get_factorizations(
+#         params=params,
+#         prior_params=prior_params,
+#         X=X,
+#         Y=Y,
+#         X_new=X_new,
+#     )
+
+#     # =====================================
+#     # 5. PREDICTIVE COVARIANCE DISTRIBUTION
+#     # =====================================
+
+#     # calculate transform kernel
+#     KxX = cov_func(params, X_new, X)
+
+#     v = jax.scipy.linalg.cho_solve(L, KxX.T)
+
+#     # Calculate kernel matrix for inputs
+#     Kxx = cov_func(params, X_new, X_new)
+
+#     cov_y = Kxx - jnp.dot(KxX, v)
+
+#     # Likelihood Noise
+#     if likelihood_noise is True:
+#         cov_y += params["likelihood_noise"]
+
+#     # return variance (diagonals of covaraince)
+#     if return_cov is not True:
+#         cov_y = jnp.diag(cov_y)
+#     return cov_y.squeeze()
