@@ -5,11 +5,11 @@ channels:
 dependencies:
 - python=3.8
 # Standard Libraries
-- numpy=1.19
-- scipy=1.5
-- scikit-learn=0.23
-- matplotlib=3.3
-- seaborn=0.11
+- numpy>=1.19
+- scipy>=1.5
+- scikit-learn>=0.23
+- matplotlib>=3.3
+- seaborn>=0.11
 # Documentation
 - conda-forge::nbsphinx
 - conda-forge::sphinx
@@ -21,12 +21,15 @@ dependencies:
   # Jax framework
   - "git+https://github.com/google/jax.git"
   - jaxlib
+  - "git+git://github.com/google/objax.git"
   - "git+git://github.com/deepmind/chex.git"
   # formatting
   - black
   - isort
   - mypy
   - pytest
+  - flake8
+  - pylint
   # logging
   - wandb
   # documentation
