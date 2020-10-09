@@ -134,6 +134,99 @@ def nhsic_cka(
     return cka_value
 
 
+def nhsic_nbs(
+    X: np.ndarray,
+    Y: np.ndarray,
+    kernel: Callable,
+    params_x: Dict[str, float],
+    params_y: Dict[str, float],
+) -> float:
+    """Normalized Bures Similarity (NBS)
+
+    A normalized variant of HSIC method which divides by
+    the HS-Norm of the eigenvalues of each dataset.
+
+    ..math::
+        \\rho(K_x, K_y) = \\
+        \\text{Tr} ( K_x^{1/2} K_y K_x^{1/2)})^{1/2} \\
+        \ \\text{Tr} (K_x) \\text{Tr} (K_y)
+
+    Parameters
+    ----------
+    X : jax.numpy.ndarray
+        the input value for one dataset
+
+    Y : jax.numpy.ndarray
+        the input value for the second dataset
+
+    kernel : Callable
+        the kernel function to be used for each of the kernel
+        calculations
+
+    params_x : Dict[str, float]
+        a dictionary of parameters to be used for calculating the
+        kernel function for X
+
+    params_y : Dict[str, float]
+        a dictionary of parameters to be used for calculating the
+        kernel function for Y
+
+    Returns
+    -------
+    cka_value : float
+        the normalized hsic value.
+
+    Notes
+    -----
+
+        This is a metric that is similar to the correlation, [0,1]
+
+    References
+    ----------
+
+    @article{JMLR:v18:16-296,
+    author  = {Austin J. Brockmeier and Tingting Mu and Sophia Ananiadou and John Y. Goulermas},
+    title   = {Quantifying the Informativeness of Similarity Measurements},
+    journal = {Journal of Machine Learning Research},
+    year    = {2017},
+    volume  = {18},
+    number  = {76},
+    pages   = {1-61},
+    url     = {http://jmlr.org/papers/v18/16-296.html}
+    }
+    """
+    # calculate hsic normally (numerator)
+    # Pxy = hsic(X, Y, kernel, params_x, params_y)
+
+    # # calculate denominator (normalize)
+    # Px = np.sqrt(hsic(X, X, kernel, params_x, params_x))
+    # Py = np.sqrt(hsic(Y, Y, kernel, params_y, params_y))
+
+    # # print(Pxy, Px, Py)
+
+    # # kernel tangent alignment value (normalized hsic)
+    # cka_value = Pxy / (Px * Py)
+    Kx = covariance_matrix(kernel, params_x, X, X)
+    Ky = covariance_matrix(kernel, params_y, Y, Y)
+
+    Kx = centering(Kx)
+    Ky = centering(Ky)
+
+    # numerator
+    numerator = np.real(np.linalg.eigvals(np.dot(Kx, Ky)))
+
+    # clip rogue numbers
+    numerator = np.sqrt(np.clip(numerator, 0.0))
+
+    numerator = np.sum(numerator)
+
+    # denominator
+    denominator = np.sqrt(np.trace(Kx) * np.trace(Ky))
+
+    # return nbs value
+    return numerator / denominator
+
+
 def nhsic_ka(
     X: np.ndarray,
     Y: np.ndarray,
@@ -325,3 +418,5 @@ def mmd(
             + a00 * (np.sum(Kx) - n_samples)
             + a11 * (np.sum(Ky) - m_samples)
         )
+
+
