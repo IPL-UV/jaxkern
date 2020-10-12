@@ -61,6 +61,13 @@ def centering(kernel_mat: jax.numpy.ndarray) -> jax.numpy.ndarray:
     return kernel_mat
 
 
+def centering_matrix(n_samples: int) -> np.ndarray:
+    """
+    Calculates the centering matrix
+    """
+    return np.eye(n_samples) - (1.0 / n_samples) * np.ones((n_samples, n_samples))
+
+
 def gram(
     func: Callable,
     params: Dict,
