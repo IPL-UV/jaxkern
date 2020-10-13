@@ -69,13 +69,6 @@ class MMD(objax.Module):
 
     def __call__(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
 
-        # get samples for constants
-        n_samples, m_samples = X.shape[0], Y.shape[0]
-
-        a00 = 1.0 / (n_samples * (n_samples - 1.0))
-        a11 = 1.0 / (m_samples * (m_samples - 1.0))
-        a01 = -1.0 / (n_samples * m_samples)
-
         # compute kernel matrices
         K_x = self.kernel_X(X, X)
         K_y = self.kernel_Y(Y, Y)
@@ -88,18 +81,14 @@ class MMD(objax.Module):
             K_xy = centering(K_xy)
 
         # calculate hsic value
-        if self.bias == True:
-            mmd = np.mean(K_x) + np.mean(K_y) - 2 * np.mean(K_xy)
+        if self.bias is True:
+            mmd = mmd_v_statistic(K_x, K_y, K_xy)
 
         else:
-            mmd = (
-                2 * a01 * np.mean(K_xy)
-                + a00 * (np.sum(K_x) - n_samples)
-                + a11 * (np.sum(K_y) - m_samples)
-            )
+            mmd = mmd_u_statistic(K_x, K_y, K_xy)
 
         # numerical error
-        mmd = np.clip(mmd, a_min=0.0, a_max=np.inf)
+        # mmd = np.clip(mmd, a_min=0.0, a_max=np.inf)
 
         return np.sqrt(mmd)
 
@@ -203,6 +192,44 @@ class MMD_RBF(objax.Module):
         mmd = np.clip(mmd, a_min=0.0, a_max=np.inf)
 
         return np.sqrt(mmd)
+
+
+def mmd_u_statistic(K_x, K_y, K_xy):
+    """
+    Calculate the MMD unbiased u-statistic
+    """
+
+    K_x = K_x - np.diag(np.diag(K_x))
+    K_y = K_y - np.diag(np.diag(K_y))
+    n_samples, m_samples = K_x.shape[0], K_y.shape[0]
+
+    # Term 1
+    A = np.sum(K_x) / (np.power(n_samples, 2) - n_samples)
+
+    # Term 2
+    B = np.sum(K_y) / (np.power(m_samples, 2) - m_samples)
+
+    # Term 3
+    C = np.mean(K_xy)
+
+    return A + B - 2 * C
+
+
+def mmd_v_statistic(K_x, K_y, K_xy) -> np.ndarray:
+    """
+    Calculate the MMD biased v-statistic
+    """
+
+    # Term 1
+    A = np.mean(K_x)
+
+    # Term 2
+    B = np.mean(K_y)
+
+    # Term 3
+    C = np.mean(K_xy)
+
+    return A + B - 2 * C
 
 
 def mmd_mi(
