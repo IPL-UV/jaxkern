@@ -2,33 +2,52 @@ from jaxkern.utils import centering
 from typing import Callable
 import jax
 import jax.numpy as np
-import objax
-from jaxkern.similarity.hsic import nhsic_cka
-from jaxkern.dist import distmat, sqeuclidean_distance
-from jaxkern.kernels.linear import Linear, linear_kernel
+from jaxkern.dist import sqeuclidean_distance
 from jaxkern.kernels.stationary import RBF
-from jaxkern.kernels.utils import kernel_matrix
+from jaxkern.kernels.utils import covariance_matrix
 
 
-def distance_corr(X: jax.numpy.ndarray, sigma=1.0) -> float:
+def distance_corr(X: np.ndarray, Y: np.ndarray) -> float:
     """Distance correlation"""
-    X = distmat(sqeuclidean_distance, X, X)
-    X = np.exp(-X / (2 * sigma ** 2))
-    return np.mean(X)
+    a = covariance_matrix(sqeuclidean_distance, X, X)
+    b = covariance_matrix(sqeuclidean_distance, Y, Y)
+    n_samples = X.shape[0]
+
+    A = (
+        a
+        - np.expand_dims(np.mean(a, axis=0), axis=0)
+        - np.expand_dims(np.mean(a, axis=1), axis=1)
+        + np.mean(a)
+    )
+    B = (
+        b
+        - np.expand_dims(np.mean(b, axis=0), axis=0)
+        - np.expand_dims(np.mean(b, axis=1), axis=1)
+        + np.mean(b)
+    )
+
+    # calculate different terms
+    term1 = np.sum(A ** 2) / n_samples ** 2
+    term2 = np.sum(B ** 2) / n_samples ** 2
+    term3 = np.sum(A * B) / n_samples ** 2
+
+    # calculate correlation
+    return np.sqrt(term3) / np.sqrt(np.sqrt(term1) * np.sqrt(term2))
 
 
-def energy_distance(X: np.ndarray, Y: np.ndarray, sigma=1.0) -> float:
+def energy_distance(
+    X: np.ndarray,
+    Y: np.ndarray,
+) -> float:
     """Distance correlation"""
     n_samples, m_samples = X.shape[0], Y.shape[0]
     a00 = -1.0 / (n_samples * n_samples)
     a11 = -1.0 / (m_samples * m_samples)
     a01 = 1.0 / (n_samples * m_samples)
-    # X = distmat(sqeuclidean_distance, X, X)
-    # X = np.exp(-X / (2 * sigma ** 2))
 
     # calculate distances
+    dist_xy = sqeuclidean_distance(X, Y)
     dist_x = sqeuclidean_distance(X, X)
     dist_y = sqeuclidean_distance(Y, Y)
-    dist_xy = sqeuclidean_distance(X, Y)
 
     return 2 * a01 * dist_xy + a00 * dist_x + a11 * dist_y
