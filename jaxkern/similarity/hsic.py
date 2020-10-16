@@ -127,6 +127,7 @@ class HSICRBFSampler(objax.Module):
         # calculate projection matrices
         Z_x = self.kernel_X(X)
         Z_y = self.kernel_Y(Y)
+        print(Z_x.shape)
 
         # calculate centered hsic value
         return hsic_v_statistic_rff(Z_x, Z_y)
@@ -216,7 +217,7 @@ def hsic_v_statistic_rff(Z_x, Z_y):
     n_samples = Z_x.shape[0]
     Z_x = Z_x - np.mean(Z_x, axis=0)
     Z_y = Z_y - np.mean(Z_y, axis=0)
-    featCov = np.dot(Z_x, Z_y.T) / n_samples
+    featCov = np.dot(Z_x.T, Z_y) / n_samples
     return np.linalg.norm(featCov) ** 2
 
 

@@ -27,7 +27,7 @@ class RBFSampler(objax.Module):
         W, b = self.get_weights(X.shape[1])
 
         # calculate projection matrix
-        Z = np.cos(W @ X.T + b)
+        Z = np.cos(np.dot(X, W) + b)
 
         # normalize projection matrix
         Z = np.sqrt(2.0) / np.sqrt(self.n_rff) * Z
@@ -42,10 +42,10 @@ class RBFSampler(objax.Module):
 
         # weights
         W = objax.random.normal(
-            mean=0, stddev=1.0, shape=(self.n_rff, n_features), generator=self.rng
+            mean=0, stddev=1.0, shape=(n_features, self.n_rff), generator=self.rng
         ) * (1.0 / self.length_scale.value)
 
-        b = 2 * np.pi * objax.random.uniform(shape=(self.n_rff, 1), generator=self.rng)
+        b = 2 * np.pi * objax.random.uniform(shape=(1, self.n_rff), generator=self.rng)
 
         return W, b
 

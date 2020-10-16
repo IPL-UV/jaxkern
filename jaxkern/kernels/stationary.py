@@ -10,7 +10,7 @@ class Stationary(Kernel):
     """
 
     def __init__(
-        self, variance: float = 2.0, length_scale: float = 0.1, input_dim: int = 1
+        self, variance: float = 1.0, length_scale: float = 1.0, input_dim: int = 1
     ):
         if isinstance(variance, int) or isinstance(variance, float):
             self.variance = objax.TrainVar(np.array([variance]))
