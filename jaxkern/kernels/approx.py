@@ -55,4 +55,4 @@ class RBFSampler(objax.Module):
         """
         Z = self.__call__(X)
 
-        return np.dot(Z.T, Z)
+        return np.dot(Z, Z.T)
