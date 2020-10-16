@@ -127,7 +127,6 @@ class HSICRBFSampler(objax.Module):
         # calculate projection matrices
         Z_x = self.kernel_X(X)
         Z_y = self.kernel_Y(Y)
-        print(Z_x.shape)
 
         # calculate centered hsic value
         return hsic_v_statistic_rff(Z_x, Z_y)
