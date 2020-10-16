@@ -157,6 +157,7 @@ class CKARBFSampler(objax.Module):
         # calculate centered hsic value
         numerator = hsic_v_statistic_rff(Z_x, Z_y)
         denominator = hsic_v_statistic_rff(Z_x, Z_x) * hsic_v_statistic_rff(Z_y, Z_y)
+
         return numerator / np.sqrt(denominator)
 
 
