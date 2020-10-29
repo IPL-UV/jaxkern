@@ -28,6 +28,8 @@ class MomentTransform(objax.Module):
 
 
 class TaylorFirstOrder(MomentTransform):
+    """Taylor First Order Transformation"""
+
     def __init__(self, model, jitted: bool = True, noise: bool = True) -> None:
         self.model = model
         f = jax.partial(predictive_mean, model)
@@ -57,6 +59,8 @@ class TaylorFirstOrder(MomentTransform):
 
 
 class TaylorSecondOrder(MomentTransform):
+    """Taylor Second Order Transformation"""
+
     def __init__(self, model, jitted: bool = True, noise: bool = True) -> None:
         self.model = model
         f = jax.partial(predictive_mean, model)
@@ -90,7 +94,7 @@ class TaylorSecondOrder(MomentTransform):
 def taylor_first_order(
     f: Callable, df: Callable, mean: JaxArray, cov: JaxArray
 ) -> Tuple[JaxArray, JaxArray]:
-    """Linearization Transformation"""
+    """Taylor First Order Transformation"""
     # apply mean function
     mean_f = f(mean)
 
