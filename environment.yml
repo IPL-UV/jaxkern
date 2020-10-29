@@ -23,6 +23,8 @@ dependencies:
   - jaxlib
   - "git+git://github.com/google/objax.git"
   - "git+git://github.com/deepmind/chex.git"
+  - "numpyro"
+  - "tfp-nightly"
   # formatting
   - black
   - isort
@@ -30,6 +32,7 @@ dependencies:
   - pytest
   - flake8
   - pylint
+  - pyprojroot
   # logging
   - wandb
   # documentation
