@@ -5,7 +5,7 @@ from jaxkern.gp.predictive import (
 )
 from typing import Callable, Tuple
 import jax
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 import jax.numpy as np
 import objax
 from objax.typing import JaxArray
