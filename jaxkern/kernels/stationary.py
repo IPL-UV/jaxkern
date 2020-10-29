@@ -76,9 +76,11 @@ class RationalQuadratic(Stationary):
 
     def __call__(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
 
-        variance = np.clip(np.abs(self.variance.value), a_min=0.0, a_max=5.0)
+        variance = jax.nn.softplus(self.variance.value)
 
         # numerical stability
         dists = np.clip(self.squared_distance(X, Y), a_min=0.0, a_max=np.inf)
 
-        return variance * (1 + 0.5 * dists / self.alpha.value) ** (-self.alpha.value)
+        alpha = variance = jax.nn.softplus(self.alpha.value)
+
+        return variance * (1 + 0.5 * dists / alpha) ** (-alpha)
