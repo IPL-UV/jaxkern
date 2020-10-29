@@ -1,5 +1,6 @@
 import jax.numpy as np
 import objax
+import jax
 from jaxkern.dist import sqeuclidean_distance, distmat
 from jaxkern.kernels.base import Kernel
 
@@ -33,7 +34,9 @@ class Stationary(Kernel):
         )
 
     def scale(self, X: np.ndarray) -> np.ndarray:
-        return X / np.clip(self.length_scale.value, a_min=0.0, a_max=10.0)
+        return X / np.clip(
+            jax.nn.softplus(self.length_scale.value), a_min=0.0, a_max=10.0
+        )
 
     def Kdiag(self, X: np.ndarray) -> np.ndarray:
         return np.abs(self.variance.value) * np.ones(X.shape[0])
@@ -46,7 +49,7 @@ class RBF(Stationary):
 
     def __call__(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
 
-        variance = np.clip(np.abs(self.variance.value), a_min=0.0, a_max=5.0)
+        variance = jax.nn.softplus(self.variance.value)
 
         # numerical stability
         dists = np.clip(self.squared_distance(X, Y), a_min=0.0, a_max=np.inf)

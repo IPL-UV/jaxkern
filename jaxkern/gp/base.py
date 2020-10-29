@@ -7,10 +7,7 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 from jaxkern.gp.utils import get_factorizations
 
 
-DEFAULT_VARIANCE_LOWER_BOUND = 1e-6
-
-
-class ExactGP(objax.Module):
+class BaseGP(objax.Module):
     def __init__(self, mean, kernel, noise: float = 0.1, jitter: float = 1e-5):
 
         # MEAN FUNCTION
@@ -34,14 +31,7 @@ class ExactGP(objax.Module):
         cov = self.kernel(X, X)
 
         # noise model
-        cov += (
-            np.clip(
-                jax.nn.softplus(self.noise.value) ** 2,
-                DEFAULT_VARIANCE_LOWER_BOUND,
-                10.0,
-            )
-            * np.eye(X.shape[0])
-        )
+        cov += jax.nn.softplus(self.noise.value) * np.eye(X.shape[0])
 
         # jitter
         cov += self.jitter * np.eye(X.shape[0])
@@ -50,15 +40,7 @@ class ExactGP(objax.Module):
         cov_chol = np.linalg.cholesky(cov)
 
         # gaussian process likelihood
-        return tfd.MultivariateNormalTriL(loc=mu.squeeze(), scale_tril=cov_chol)
-
-    def cache_factorizations(self, X: np.ndarray, y: np.ndarray) -> None:
-
-        # calculate factorizations
-        self.X_train_, self.y_train_ = X, y
-        self.L, self.weights = get_factorizations(
-            X, y, jax.nn.softplus(self.noise.value), self.mean, self.kernel
-        )
+        return tfd.MultivariateNormalTriL(loc=mu, scale_tril=cov_chol)
 
     def predict_f(self, X, return_std: bool = True):
 

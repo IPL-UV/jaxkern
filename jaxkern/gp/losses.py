@@ -5,6 +5,12 @@ import jax
 import jax.numpy as jnp
 
 
+def negative_log_likelihood(gp_model, X, y):
+    dist = gp_model.forward(X)
+    return -dist.log_prob(y.T).mean()
+
+
+#
 @partial(jax.jit, static_argnums=(0))
 def marginal_likelihood(
     prior_params: Tuple[Callable, Callable],
