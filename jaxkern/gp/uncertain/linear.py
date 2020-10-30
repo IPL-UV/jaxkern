@@ -6,11 +6,8 @@ import jax.numpy as np
 import objax
 from objax.typing import JaxArray
 
-from jaxkern.gp.predictive import (
-    predictive_mean,
-    predictive_variance,
-    predictive_variance_y,
-)
+from jaxkern.gp.predictive import (predictive_mean, predictive_variance,
+                                   predictive_variance_y)
 
 
 class TaylorFirstOrder(objax.Module):
