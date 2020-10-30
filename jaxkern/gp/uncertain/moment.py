@@ -7,7 +7,7 @@ from numpy.polynomial.hermite_e import hermegauss, hermeval
 from objax.typing import JaxArray
 from scipy.special import factorial
 from sklearn.utils.extmath import cartesian
-
+from jaxkern.kernels.expectations import KernelExpectation
 from jaxkern.gp.predictive import predictive_mean
 
 
@@ -103,6 +103,47 @@ class SphericalRadialTransform(UnscentedTransform):
         jitted: bool = False,
     ):
         super().__init__(model=model, kappa=0.0, alpha=1.0, beta=0.0, jitted=jitted)
+
+
+class MomentMatchingTransform(objax.Module):
+    def __init__(self, model: objax.Module, moment_transform, **kwargs):
+        self.model = model
+        self.kernel_expectations = KernelExpectation(
+            model.kernel, moment_transform, model=model, **kwargs
+        )
+        self._get_factorizations()
+
+    def _get_factorizations(self):
+
+        self.K_inv_ = jax.scipy.linalg.inv(
+            self.model.kernel(self.model.X_train_, self.model.X_train_)
+            + (jax.nn.softplus(self.model.noise.value) ** 2)
+            * np.eye(self.model.X_train_.shape[0])
+        )
+
+    def transform(self, X: JaxArray, Xcov: JaxArray) -> Tuple[JaxArray, JaxArray]:
+
+        # calculate kernel expectations
+        psi0 = self.kernel_expectations.expectation_xkx(X, Xcov)
+        psi1 = self.kernel_expectations.expectation_xkxy(X, Xcov, self.model.X_train_)
+        psi2 = self.kernel_expectations.expectation_xkxyz(
+            X, Xcov, self.model.X_train_, self.model.X_train_
+        )
+
+        # calculate mean function
+
+        mean_ef = psi1 @ self.model.weights
+        # Q = self.K_inv - self.model.weights @ self.model.weights.T
+
+        # calculate variance function
+        t1 = psi0
+        t2 = np.trace(
+            (psi2 @ (self.K_inv_ - self.model.weights @ self.model.weights.T)).T
+        )
+        t3 = np.trace(psi1.T @ psi1 @ self.model.weights @ self.model.weights.T)
+        t3 = mean_ef ** 2
+        var_ef = t1.squeeze() - t2.squeeze() - t3.squeeze()
+        return mean_ef, var_ef
 
 
 def moment_transform(mean_f, X, Xcov, sigma_points, wm, wc):
