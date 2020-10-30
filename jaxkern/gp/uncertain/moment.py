@@ -128,6 +128,22 @@ def moment_transform(mean_f, X, Xcov, sigma_points, wm, wc):
     return mean_f, np.diag(cov_f)
 
 
+def moment_transform_mean(mean_f, X, Xcov, sigma_points, wm, wc):
+
+    # form sigma points from unit sigma-points
+    # print(Xcov.shape, Xcov.shape, sigma_points.shape)
+    x_ = X[:, None] + np.linalg.cholesky(Xcov) @ sigma_points
+    # print("x_:", x_.shape)
+
+    fx_ = mean_f(x_.T)
+    # print("fx_:", fx_.shape, ", wm_:", wm.shape)
+
+    # output mean
+    mean_f = np.sum(fx_ * wm)
+
+    return mean_f
+
+
 def get_quadrature_weights(
     n_features: int,
     degree: int = 3,
