@@ -13,7 +13,8 @@ from jaxkern.gp.exact import posterior
 from jaxkern.gp.kernels import gram, rbf_kernel
 from jaxkern.gp.loss import marginal_likelihood
 from jaxkern.gp.mean import zero_mean
-from jaxkern.gp.utils import cholesky_factorization, get_factorizations, saturate
+from jaxkern.gp.utils import (cholesky_factorization, get_factorizations,
+                              saturate)
 
 plt.style.use(["seaborn-talk"])
 

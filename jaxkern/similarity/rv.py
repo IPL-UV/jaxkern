@@ -1,13 +1,15 @@
-from jaxkern.utils import centering
 from typing import Callable
+
 import jax
 import jax.numpy as np
 import objax
+
 from jaxkern.dependence import nhsic_cka
 from jaxkern.dist import distmat, sqeuclidean_distance
 from jaxkern.kernels.linear import Linear, linear_kernel
 from jaxkern.kernels.stationary import RBF
 from jaxkern.kernels.utils import kernel_matrix
+from jaxkern.utils import centering
 
 
 class RVCoeff(CKA):

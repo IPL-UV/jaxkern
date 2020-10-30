@@ -1,5 +1,5 @@
-import objax
 import jax.numpy as np
+import objax
 
 
 def zero_mean(x):

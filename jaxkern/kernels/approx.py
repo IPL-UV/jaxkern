@@ -1,7 +1,9 @@
 from typing import Tuple
-import objax
-from jaxkern.kernels.base import Kernel
+
 import jax.numpy as np
+import objax
+
+from jaxkern.kernels.base import Kernel
 
 
 class RBFSampler(objax.Module):

@@ -1,7 +1,8 @@
-from jaxkern.kernels.base import Kernel
-import objax
 import jax.numpy as np
+import objax
+
 from jaxkern.dist import distmat
+from jaxkern.kernels.base import Kernel
 
 
 class Linear(Kernel):

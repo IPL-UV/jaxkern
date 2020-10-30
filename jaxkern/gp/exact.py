@@ -1,11 +1,12 @@
 from functools import partial
 from typing import Callable, Dict, Tuple
-import objax
+
 import jax
 import jax.numpy as np
+import objax
 from tensorflow_probability.substrates.jax import distributions as tfd
-from jaxkern.gp.utils import get_factorizations
 
+from jaxkern.gp.utils import get_factorizations
 
 DEFAULT_VARIANCE_LOWER_BOUND = 1e-6
 

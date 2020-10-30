@@ -1,7 +1,8 @@
+import jax
 import jax.numpy as np
 import objax
-import jax
-from jaxkern.dist import sqeuclidean_distance, distmat
+
+from jaxkern.dist import distmat, sqeuclidean_distance
 from jaxkern.kernels.base import Kernel
 
 

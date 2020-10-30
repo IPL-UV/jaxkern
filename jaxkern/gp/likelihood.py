@@ -1,6 +1,6 @@
 import jax
-import objax
 import jax.numpy as np
+import objax
 
 
 class GaussianLikelihood(objax.Module):

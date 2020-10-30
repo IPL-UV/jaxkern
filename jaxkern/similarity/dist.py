@@ -1,10 +1,12 @@
-from jaxkern.utils import centering
 from typing import Callable
+
 import jax
 import jax.numpy as np
+
 from jaxkern.dist import sqeuclidean_distance
 from jaxkern.kernels.stationary import RBF
 from jaxkern.kernels.utils import covariance_matrix
+from jaxkern.utils import centering
 
 
 def distance_corr(X: np.ndarray, Y: np.ndarray) -> float:

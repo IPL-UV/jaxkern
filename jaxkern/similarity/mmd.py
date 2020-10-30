@@ -1,11 +1,12 @@
-from jaxkern.dist import sqeuclidean_distance
 from typing import Callable, Dict
+
 import jax
 import jax.numpy as np
 import objax
 
-from jaxkern.kernels.utils import gram, covariance_matrix
+from jaxkern.dist import sqeuclidean_distance
 from jaxkern.kernels.stationary import RBF
+from jaxkern.kernels.utils import covariance_matrix, gram
 from jaxkern.utils import centering
 
 jax_np = jax.numpy.ndarray

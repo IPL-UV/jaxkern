@@ -1,13 +1,15 @@
 from typing import Tuple
+
 import jax
 import jax.numpy as np
 import numpyro.distributions as dist
 import objax
 from objax.typing import JaxArray
+
 from jaxkern.gp.predictive import predictive_mean
 
 
-class MCMCTransform(objax.Module):
+class MCTransform(objax.Module):
     def __init__(self, model, jitted: bool = False, seed: int = 123):
         self.n_features = model.X_train_.shape[-1]
 

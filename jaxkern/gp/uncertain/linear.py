@@ -1,33 +1,19 @@
+from abc import abstractmethod
+from typing import Callable, Tuple
+
+import jax
+import jax.numpy as np
+import objax
+from objax.typing import JaxArray
+
 from jaxkern.gp.predictive import (
     predictive_mean,
     predictive_variance,
     predictive_variance_y,
 )
-from typing import Callable, Tuple
-import jax
-from abc import abstractmethod
-import jax.numpy as np
-import objax
-from objax.typing import JaxArray
 
 
-class MomentTransform(objax.Module):
-    def __init__(
-        self, f: Callable[[JaxArray], JaxArray], df: Callable[[JaxArray], JaxArray]
-    ) -> None:
-        self.f = f
-        self.df = df
-
-    @abstractmethod
-    def transform(self, mean, cov) -> Tuple[JaxArray, JaxArray]:
-        pass
-
-    @abstractmethod
-    def transform_vectorized(self, mean, cov) -> Tuple[JaxArray, JaxArray]:
-        pass
-
-
-class TaylorFirstOrder(MomentTransform):
+class TaylorFirstOrder(objax.Module):
     """Taylor First Order Transformation"""
 
     def __init__(self, model, jitted: bool = True, noise: bool = True) -> None:
@@ -58,7 +44,7 @@ class TaylorFirstOrder(MomentTransform):
         return mu, var
 
 
-class TaylorSecondOrder(MomentTransform):
+class TaylorSecondOrder(objax.Module):
     """Taylor Second Order Transformation"""
 
     def __init__(self, model, jitted: bool = True, noise: bool = True) -> None:

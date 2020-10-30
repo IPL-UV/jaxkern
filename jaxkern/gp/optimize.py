@@ -1,10 +1,11 @@
 from typing import Callable
+
 import jax
 import jax.numpy as np
-import tqdm
 import objax
-from objax.typing import JaxArray
+import tqdm
 from objax.optimizer import SGD
+from objax.typing import JaxArray
 
 
 def optimize_model(

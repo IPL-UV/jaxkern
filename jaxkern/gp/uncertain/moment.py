@@ -1,39 +1,32 @@
 from typing import Optional, Tuple
+
 import jax
 import jax.numpy as np
 import objax
+from numpy.polynomial.hermite_e import hermegauss, hermeval
 from objax.typing import JaxArray
+from scipy.special import factorial
+from sklearn.utils.extmath import cartesian
+
 from jaxkern.gp.predictive import predictive_mean
 
 
-class UnscentedTransform(objax.Module):
-    def __init__(
-        self,
-        model,
-        kappa: Optional[float] = None,
-        alpha: float = 1.0,
-        beta: float = 2.0,
-        jitted: bool = False,
-        seed: int = 123,
-    ):
+class GaussHermite(objax.Module):
+    def __init__(self, model, degree: int = 3, jitted: bool = False):
         self.n_features = model.X_train_.shape[-1]
 
         # generate sigma weights
-        wm, wc = get_unscented_weights(
-            self.n_features, kappa=kappa, alpha=alpha, beta=beta
-        )
+        wm = get_quadrature_weights(self.n_features, degree=degree)
         self.wm = wm.squeeze()
-        self.wc = np.diag(wc.squeeze())
+        self.wc = np.diag(self.wm)
 
         # generate sigma points
-        self.sigma_points = get_unscented_sigma_points(
-            self.n_features, kappa=kappa, alpha=alpha
-        )
+        self.sigma_points = get_quadrature_sigma_points(self.n_features, degree=degree)
 
         f = jax.vmap(jax.partial(predictive_mean, model))
 
         transform = jax.vmap(
-            jax.partial(_transform, f), in_axes=(0, 0, None, None, None)
+            jax.partial(moment_transform, f), in_axes=(0, 0, None, None, None)
         )
 
         if jitted:
@@ -55,7 +48,64 @@ class UnscentedTransform(objax.Module):
         return mean_f, var_f
 
 
-def _transform(mean_f, X, Xcov, sigma_points, wm, wc):
+class UnscentedTransform(objax.Module):
+    def __init__(
+        self,
+        model: objax.Module,
+        kappa: Optional[float] = None,
+        alpha: float = 1.0,
+        beta: float = 2.0,
+        jitted: bool = False,
+    ):
+        self.n_features = model.X_train_.shape[-1]
+
+        # generate sigma weights
+        wm, wc = get_unscented_weights(
+            self.n_features, kappa=kappa, alpha=alpha, beta=beta
+        )
+        self.wm = wm.squeeze()
+        self.wc = np.diag(wc.squeeze())
+
+        # generate sigma points
+        self.sigma_points = get_unscented_sigma_points(
+            self.n_features, kappa=kappa, alpha=alpha
+        )
+
+        f = jax.vmap(jax.partial(predictive_mean, model))
+
+        transform = jax.vmap(
+            jax.partial(moment_transform, f), in_axes=(0, 0, None, None, None)
+        )
+
+        if jitted:
+            transform = jax.jit(transform)
+
+        self.transform = transform
+
+    def forward(self, X, Xcov) -> Tuple[JaxArray, JaxArray]:
+
+        # form sigma points from unit sigma-points
+        mean_f, var_f = self.transform(
+            X,
+            Xcov,
+            self.sigma_points,
+            self.wm,
+            self.wc,
+        )
+
+        return mean_f, var_f
+
+
+class SphericalRadialTransform(UnscentedTransform):
+    def __init__(
+        self,
+        model: objax.Module,
+        jitted: bool = False,
+    ):
+        super().__init__(model=model, kappa=0.0, alpha=1.0, beta=0.0, jitted=jitted)
+
+
+def moment_transform(mean_f, X, Xcov, sigma_points, wm, wc):
 
     # form sigma points from unit sigma-points
     # print(Xcov.shape, Xcov.shape, sigma_points.shape)
@@ -76,6 +126,30 @@ def _transform(mean_f, X, Xcov, sigma_points, wm, wc):
     cov_f = dfx_.T @ wc @ dfx_
     # print("Cov_f:", cov_f.shape)
     return mean_f, np.diag(cov_f)
+
+
+def get_quadrature_weights(
+    n_features: int,
+    degree: int = 3,
+) -> JaxArray:
+    """Generate normalizers for MCMC samples"""
+
+    # 1D sigma-points (x) and weights (w)
+    x, w = hermegauss(degree)
+    # hermegauss() provides weights that cause posdef errors
+    w = factorial(degree) / (degree ** 2 * hermeval(x, [0] * (degree - 1) + [1]) ** 2)
+    return np.prod(cartesian([w] * n_features), axis=1)
+
+
+def get_quadrature_sigma_points(
+    n_features: int,
+    degree: int = 3,
+) -> JaxArray:
+    """Generate Unscented samples"""
+    # 1D sigma-points (x) and weights (w)
+    x, w = hermegauss(degree)
+    # nD sigma-points by cartesian product
+    return cartesian([x] * n_features).T  # column/sigma-point
 
 
 def get_unscented_weights(
