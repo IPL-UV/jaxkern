@@ -15,6 +15,16 @@ from jaxkern.utils import centering
 
 
 class HSIC(objax.Module):
+    """Hilbert-Schmidt Independence Criterion
+
+    Parameters
+    ----------
+    kernel_X : Callable
+        the kernel matrix to be used for X
+    kernel_Y : Callable
+        the kernel matrix to be used for Y
+    """
+
     def __init__(
         self, kernel_X: Callable, kernel_Y: Callable, bias: bool = True
     ) -> None:
@@ -114,17 +124,36 @@ class HSICRBFSampler(objax.Module):
         n_rff: int = 100,
         length_scale_X: float = 2.0,
         length_scale_Y: float = 2.0,
+        n_subsamples: int = 1_000,
         seed=(123, 42),
     ) -> None:
+        self.seed = seed
         self.n_rff = n_rff
-        self.kernel_X = RBFSampler(
-            n_rff=self.n_rff, length_scale=length_scale_X, center=True, seed=seed[0]
-        )
-        self.kernel_Y = RBFSampler(
-            n_rff=self.n_rff, length_scale=length_scale_Y, center=True, seed=seed[1]
-        )
+        self.n_subsamples = n_subsamples
+        self.length_scale_X = length_scale_X
+        self.length_scale_Y = length_scale_Y
 
     def __call__(self, X, Y):
+
+        length_scale_X = self.length_scale_X(
+            X[: self.n_subsamples], X[: self.n_subsamples]
+        )
+        length_scale_Y = self.length_scale_Y(
+            Y[: self.n_subsamples], Y[: self.n_subsamples]
+        )
+
+        self.kernel_X = RBFSampler(
+            n_rff=self.n_rff,
+            length_scale=length_scale_X,
+            center=True,
+            seed=self.seed[0],
+        )
+        self.kernel_Y = RBFSampler(
+            n_rff=self.n_rff,
+            length_scale=length_scale_Y,
+            center=True,
+            seed=self.seed[1],
+        )
 
         # calculate projection matrices
         Z_x = self.kernel_X(X)
@@ -134,23 +163,28 @@ class HSICRBFSampler(objax.Module):
         return hsic_v_statistic_rff(Z_x, Z_y)
 
 
-class CKARBFSampler(objax.Module):
-    def __init__(
-        self,
-        n_rff: int = 100,
-        length_scale_X: float = 2.0,
-        length_scale_Y: float = 2.0,
-        seed=(123, 42),
-    ) -> None:
-        self.n_rff = n_rff
-        self.kernel_X = RBFSampler(
-            n_rff=self.n_rff, length_scale=length_scale_X, center=True, seed=seed[0]
+class CKARBFSampler(HSICRBFSampler):
+    def __call__(self, X, Y):
+
+        length_scale_X = self.length_scale_X(
+            X[: self.n_subsamples], X[: self.n_subsamples]
         )
-        self.kernel_Y = RBFSampler(
-            n_rff=self.n_rff, length_scale=length_scale_Y, center=True, seed=seed[1]
+        length_scale_Y = self.length_scale_Y(
+            Y[: self.n_subsamples], Y[: self.n_subsamples]
         )
 
-    def __call__(self, X, Y):
+        self.kernel_X = RBFSampler(
+            n_rff=self.n_rff,
+            length_scale=length_scale_X,
+            center=True,
+            seed=self.seed[0],
+        )
+        self.kernel_Y = RBFSampler(
+            n_rff=self.n_rff,
+            length_scale=length_scale_Y,
+            center=True,
+            seed=self.seed[1],
+        )
 
         # calculate projection matrices
         Z_x = self.kernel_X(X)
