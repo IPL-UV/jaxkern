@@ -32,11 +32,6 @@ class MCTransform(objax.Module):
         mc_samples = get_mc_sigma_points(
             key, self.n_features, n_samples=(X.shape[0], n_samples)
         )
-        print(
-            X.shape,
-            Xcov.shape,
-            mc_samples.shape,
-        )
         # form sigma points from unit sigma-points
         mean_f, var_f = self.transform(X, Xcov, mc_samples)
 

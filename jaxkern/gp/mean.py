@@ -11,12 +11,12 @@ def zero_mean(x):
 class ZeroMean(objax.Module):
     """Zero Mean Function"""
 
-    def __init__(self):
+    def __init__(self, input_dim):
 
-        self.zeros = objax.TrainRef(np.zeros([0]))
+        self.zeros = np.zeros((input_dim,))
 
     def __call__(self, X: JaxArray) -> JaxArray:
-        return self.zeros * X
+        return self.zeros
 
 
 class ConstantMean(objax.Module):

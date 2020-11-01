@@ -2,6 +2,7 @@ from typing import Callable, Tuple, List
 
 import jax
 import jax.numpy as np
+import numpy as onp
 import objax
 import tqdm
 from objax.optimizer import Adam
@@ -19,7 +20,7 @@ def optimize_model(
     lr: float = 0.01,
     n_epochs: int = 100,
     jitted: bool = True,
-    **kwargs
+    **kwargs,
 ) -> Tuple[objax.Module, List[JaxArray]]:
     """Helper training loop for gp model
 
@@ -54,7 +55,7 @@ def optimize_model(
         a list of all of the loss values for every step
     """
 
-    # loss_f = jax.partial(loss_f, model)
+    loss_f = jax.partial(loss_f, model)
 
     # create optimizer for variables
     opt = opt(model.vars(), **kwargs)
@@ -82,5 +83,9 @@ def optimize_model(
         loss = train_op(X, y.squeeze())
 
         losses.append(loss)
+
+        # update progress bar
+        postfix = dict(Loss=f"{loss[0]:.2f}")
+        pbar.set_postfix(postfix)
 
     return model, losses
