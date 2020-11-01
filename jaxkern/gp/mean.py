@@ -1,5 +1,6 @@
 import jax.numpy as np
 import objax
+from objax.typing import JaxArray
 
 
 def zero_mean(x):
@@ -8,17 +9,32 @@ def zero_mean(x):
 
 
 class ZeroMean(objax.Module):
-    def __init__(self):
-        pass
+    """Zero Mean Function"""
 
-    def __call__(self, X: np.ndarray) -> np.ndarray:
-        return np.zeros(X.shape[-1], dtype=X.dtype)
+    def __init__(self):
+
+        self.zeros = objax.TrainRef(np.zeros([0]))
+
+    def __call__(self, X: JaxArray) -> JaxArray:
+        return self.zeros * X
+
+
+class ConstantMean(objax.Module):
+    """Constant Mean Function"""
+
+    def __init__(self, input_dim, output_dim):
+        self.c = objax.TrainVar(np.ones(input_dim))
+
+    def __call__(self, X: JaxArray) -> JaxArray:
+        return self.c.value * X
 
 
 class LinearMean(objax.Module):
+    """Linear Mean Function"""
+
     def __init__(self, input_dim, output_dim):
         self.w = objax.TrainVar(objax.random.normal((input_dim, output_dim)))
         self.b = objax.TrainVar(np.zeros(output_dim))
 
-    def __call__(self, X: np.ndarray) -> np.ndarray:
-        return np.dot(X.T, self.w.value) + self.b.value
+    def __call__(self, X: JaxArray) -> JaxArray:
+        return np.dot(X, self.w.value) + self.b.value

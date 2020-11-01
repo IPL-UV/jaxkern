@@ -5,14 +5,14 @@ import jax.numpy as np
 
 from jaxkern.dist import sqeuclidean_distance
 from jaxkern.kernels.stationary import RBF
-from jaxkern.kernels.utils import covariance_matrix
+from jaxkern.kernels.utils import covariance_matrix, kernel_matrix
 from jaxkern.utils import centering
 
 
 def distance_corr(X: np.ndarray, Y: np.ndarray) -> float:
     """Distance correlation"""
-    a = covariance_matrix(sqeuclidean_distance, X, X)
-    b = covariance_matrix(sqeuclidean_distance, Y, Y)
+    a = kernel_matrix(sqeuclidean_distance, X, X)
+    b = kernel_matrix(sqeuclidean_distance, Y, Y)
     n_samples = X.shape[0]
 
     A = (

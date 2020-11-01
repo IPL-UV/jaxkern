@@ -1,44 +1,39 @@
 from functools import partial
 from typing import Callable, Dict, Tuple
 
+import objax
+from objax.typing import JaxArray
 import jax
-import jax.numpy as jnp
+import jax.numpy as np
 
 
-def negative_log_likelihood(gp_model, X, y):
+def negative_log_likelihood(
+    gp_model: objax.Module, X: JaxArray, y: JaxArray
+) -> JaxArray:
+    """Negative Log-Likelihood given a GP model
+    This function is meant to act as a helper to the
+    exact GP model. So given a GP model fitted to some inputs,
+    we get a distribution where we can calculate the log-likelihood
+    of the distribution conditioned on the outputs y.
+
+    Parameters
+    ----------
+    gp_model: objax.Module
+        the GP model which outputs a distribution.
+
+    X : JaxArray
+        the inputs (n_samples, n_features)
+
+    Y : JaxArray
+        the inputs, (n_samples, 1)
+
+    Returns
+    -------
+    nll : JaxArray
+        the negative log-likelihood value, ()
+    """
+    # construct a GP model
     dist = gp_model.forward(X)
+
+    # return the negative log-likelihood
     return -dist.log_prob(y.T).mean()
-
-
-#
-@partial(jax.jit, static_argnums=(0))
-def marginal_likelihood(
-    prior_params: Tuple[Callable, Callable],
-    params: Dict,
-    Xtrain: jnp.ndarray,
-    Ytrain: jnp.ndarray,
-) -> float:
-
-    # unpack params
-    (mu_f, cov_f) = prior_params
-
-    # ==========================
-    # 1. GP Prior, mu(), cov(,)
-    # ==========================
-    mu_x = mu_f(Ytrain)
-    Kxx = cov_f(params, Xtrain, Xtrain)
-
-    # ===========================
-    # 2. GP Likelihood
-    # ===========================
-    K_gp = Kxx + (params["likelihood_noise"] + 1e-6) * jnp.eye(Kxx.shape[0])
-
-    # ===========================
-    # 3. Log Probability
-    # ===========================
-    log_prob = jax.scipy.stats.multivariate_normal.logpdf(
-        x=Ytrain.T, mean=mu_x, cov=K_gp
-    )
-
-    # Negative Marginal log-likelihood
-    return -log_prob.sum()
