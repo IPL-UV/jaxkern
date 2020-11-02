@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as onp
 
@@ -9,7 +9,7 @@ def generate_data(
     noise_x: float = 0.1,
     noise_y: float = 0.1,
     random_state: Optional[int] = 123,
-) -> None:
+) -> Tuple[onp.ndarray, onp.ndarray]:
 
     rng = onp.random.RandomState(random_state)
 
@@ -17,6 +17,7 @@ def generate_data(
         x = rng.rand(n_samples, 1)
 
         y = x + noise_y * rng.randn(n_samples, 1)
+
     elif dataset == "random":
         x = rng.rand(n_samples, 1)
         y = rng.rand(n_samples, 1)
