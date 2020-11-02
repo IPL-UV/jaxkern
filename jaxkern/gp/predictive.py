@@ -1,6 +1,35 @@
+from typing import Callable, Tuple
 import jax
 import jax.numpy as np
 from objax.typing import JaxArray
+
+
+def conditional(
+    kernel: Callable,
+    Xtrain: JaxArray,
+    ytrain: JaxArray,
+    weights: JaxArray,
+    L: Tuple[JaxArray, bool],
+    Xnew: JaxArray,
+) -> Tuple[JaxArray, JaxArray]:
+    # projection kernel
+    K_Xx = kernel(Xnew, Xtrain)
+
+    # Calculate the Mean
+    mu_y = np.dot(K_Xx, weights)
+
+    # calculate the covariance
+    v = jax.scipy.linalg.cho_solve(L, K_Xx.T)
+
+    K_xx = kernel(Xnew, Xnew)
+
+    cov_y = K_xx - np.dot(K_Xx, v)
+
+    return mu_y, cov_y
+
+
+def conditional_mean(kernel, Xtrain, ytrain, weights, L, Xnew):
+    return None
 
 
 def predictive_mean(model, X: JaxArray) -> JaxArray:

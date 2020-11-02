@@ -1,7 +1,7 @@
-Sigma
-=====
+Density
+=======
 
-.. automodule:: jaxkern.sigma
+.. automodule:: jaxkern.density
    :members:
    :inherited-members:
    :show-inheritance:

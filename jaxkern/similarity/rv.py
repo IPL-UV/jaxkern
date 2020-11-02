@@ -4,7 +4,6 @@ import jax
 import jax.numpy as np
 import objax
 from objax.typing import JaxArray
-from jaxkern.dependence import nhsic_cka
 from jaxkern.kernels.linear import Linear, linear_kernel
 from jaxkern.kernels.stationary import RBF
 from jaxkern.similarity.hsic import CKA, hsic_u_statistic, hsic_v_statistic
@@ -117,7 +116,7 @@ def rv_coeff(X: JaxArray, Y: JaxArray) -> JaxArray:
     return nhsic_cka(X, Y, linear_kernel, {}, {})
 
 
-def rv_coeff_features(X: JaxArray, Y: JaxArray, bias: bool = True) -> JaxArray:
+def rv_coeff_feat(X: JaxArray, Y: JaxArray, bias: bool = True) -> JaxArray:
     """Calculates the RV coefficient in the feature space
 
     This stands for the rho-Vector component and it is a non-linear

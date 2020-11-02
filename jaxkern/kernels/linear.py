@@ -1,45 +1,59 @@
 import jax.numpy as np
 import objax
-
-from jaxkern.dist import distmat
+from objax.typing import JaxArray
+from jaxkern.utils import kernel_mat
 from jaxkern.kernels.base import Kernel
 
 
 class Linear(Kernel):
+    """Linear Kernel
+
+    Note
+    ----
+        They don't have to have the same number of samples but
+        they do need to have the same number of features.
     """
-    Linear Kernel
-    """
 
-    def __init__(self, input_dim: int = 1) -> None:
-        self.input_dim = input_dim
+    def __init__(self, input_dim: int = 1):
 
-    def __call__(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
+        self.input_dim = objax.TrainRef(np.array([input_dim]))
 
-        return distmat(
+    def __call__(self, X: JaxArray, Y: JaxArray) -> JaxArray:
+        """Kernel matrix for linear kernel
+
+        Parameters
+        ----------
+        X : JaxArray
+            dataset I, (n_samples, n_features)
+        Y : JaxArray
+            dataset II, (m_samples, n_features)
+
+        Returns
+        -------
+        kernel_mat : JaxArray
+            the kernel matrix, (n_samples, m_samples
+        """
+        return kernel_mat(
             linear_kernel,
             X,
             Y,
         )
 
 
-def linear_kernel(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    """Linear kernel
-
-    .. math:: k_i = \sum_i^N x_i-y_i
+def linear_kernel(x: JaxArray, y: JaxArray) -> JaxArray:
+    """Linear kernel function
+    Takes two vectors and computes the dot product between them.
 
     Parameters
     ----------
-    params : None
-        kept for compatibility
-    x : jax.numpy.ndarray
-        the inputs
-    y : jax.numpy.ndarray
-        the inputs
+    x : JaxArray
+        vector I, (n_features,)
+    y : JaxArray
+        vector II, (n_features,)
 
     Returns
     -------
-    kernel_mat : jax.numpy.ndarray
-        the kernel matrix (n_samples, n_samples)
-
+    k : JaxArray
+        the output, ()
     """
     return np.sum(x * y)

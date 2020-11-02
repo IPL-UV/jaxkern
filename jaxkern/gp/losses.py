@@ -11,6 +11,7 @@ def negative_log_likelihood(
     gp_model: objax.Module, X: JaxArray, y: JaxArray
 ) -> JaxArray:
     """Negative Log-Likelihood given a GP model
+
     This function is meant to act as a helper to the
     exact GP model. So given a GP model fitted to some inputs,
     we get a distribution where we can calculate the log-likelihood
