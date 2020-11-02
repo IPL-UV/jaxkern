@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import jax
 import jax.numpy as np
@@ -169,7 +169,13 @@ def moment_transform(mean_f, X, Xcov, sigma_points, wm, wc):
     return mean_f, np.diag(cov_f)
 
 
-def moment_transform_mean(mean_f, X, Xcov, sigma_points, wm, wc):
+def moment_transform_mean(
+    mean_f: Callable[[JaxArray], JaxArray],
+    X: JaxArray,
+    Xcov: JaxArray,
+    sigma_points: JaxArray,
+    wm: JaxArray,
+) -> JaxArray:
 
     # form sigma points from unit sigma-points
     # print(Xcov.shape, Xcov.shape, sigma_points.shape)
