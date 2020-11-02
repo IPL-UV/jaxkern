@@ -4,11 +4,12 @@ from typing import Callable, Optional
 import jax
 import jax.numpy as np
 import objax
+from objax.typing import JaxArray
 
 from jaxkern.dist import distmat, sqeuclidean_distance
 from jaxkern.kernels.approx import RBFSampler
-from jaxkern.kernels.linear import Linear, linear_kernel
-from jaxkern.kernels.stationary import RBF
+from jaxkern.kernels.linear import linear_kernel
+from jaxkern.kernels.stationary import rbf_kernel
 from jaxkern.kernels.utils import kernel_matrix
 from jaxkern.utils import centering
 
@@ -40,14 +41,10 @@ class HSIC(objax.Module):
         K_x = self.kernel_X(X, X)
         K_y = self.kernel_Y(Y, Y)
 
-        # center matrices
-        K_x = centering(K_x)
-        K_y = centering(K_y)
-
         if self.bias is True:
-            return hsic_v_statistic(K_x, K_y)
+            return hsic_v_statistic_einsum(K_x, K_y)
         else:
-            return hsic_u_statistic(K_x, K_y)
+            return hsic_u_statistic_einsum(K_x, K_y)
 
 
 class CKA(objax.Module):
@@ -77,17 +74,17 @@ class CKA(objax.Module):
         K_x = self.kernel_X(X, X)
         K_y = self.kernel_Y(Y, Y)
 
-        # center matrices
-        K_x = centering(K_x)
-        K_y = centering(K_y)
-
         # calculate centered hsic value
         if self.bias is True:
-            numerator = hsic_v_statistic(K_x, K_y)
-            denominator = hsic_v_statistic(K_x, K_x) * hsic_v_statistic(K_y, K_y)
+            numerator = hsic_v_statistic_einsum(K_x, K_y)
+            denominator = hsic_v_statistic_einsum(K_x, K_x) * hsic_v_statistic_einsum(
+                K_y, K_y
+            )
         else:
-            numerator = hsic_u_statistic(K_x, K_y)
-            denominator = hsic_u_statistic(K_x, K_x) * hsic_u_statistic(K_y, K_y)
+            numerator = hsic_u_statistic_einsum(K_x, K_y)
+            denominator = hsic_u_statistic_einsum(K_x, K_x) * hsic_u_statistic_einsum(
+                K_y, K_y
+            )
         return numerator / np.sqrt(denominator)
 
 
@@ -96,23 +93,22 @@ class HSICRBF(objax.Module):
         self.sigma_x = sigma_x
         self.sigma_y = sigma_y
         self.bias = bias
+        self.kernel = jax.vmap(rbf_kernel)
 
     def __call__(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
 
         # compute kernel matrices
         sigma_x = self.sigma_x(X, X)
         sigma_y = self.sigma_y(Y, Y)
-        K_x = RBF(length_scale=sigma_x, variance=1.0)(X, X)
-        K_y = RBF(length_scale=sigma_y, variance=1.0)(Y, Y)
-
-        # center matrices
-        K_x = centering(K_x)
-        K_y = centering(K_y)
+        kernelx_f = jax.partial(rbf_kernel, sigma_x, 1.0)
+        kernely_f = jax.partial(rbf_kernel, sigma_y, 1.0)
+        K_x = kernel_matrix(kernelx_f, X, X)
+        K_y = kernel_matrix(kernely_f, Y, Y)
 
         if self.bias is True:
-            return hsic_v_statistic(K_x, K_y)
+            return hsic_v_statistic_einsum(K_x, K_y)
         else:
-            return hsic_u_statistic(K_x, K_y)
+            return hsic_u_statistic_einsum(K_x, K_y)
 
         # # center matrices
         # K_x = centering(K_x)
@@ -144,24 +140,27 @@ class CKARBF(objax.Module):
     def __call__(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
 
         # compute sigma values
-        sigma_x = self.sigma_x(X, X)
-        sigma_y = self.sigma_y(Y, Y)
+        # compute kernel matrices
+        self.sigma_x_ = self.sigma_x(X, X)
+        self.sigma_y_ = self.sigma_y(Y, Y)
 
         # compute kernel matrices
-        K_x = RBF(length_scale=sigma_x, variance=1.0)(X, X)
-        K_y = RBF(length_scale=sigma_y, variance=1.0)(Y, Y)
-
-        # center matrices
-        K_x = centering(K_x)
-        K_y = centering(K_y)
+        kernelx_f = jax.partial(rbf_kernel, self.sigma_x_, 1.0)
+        kernely_f = jax.partial(rbf_kernel, self.sigma_y_, 1.0)
+        K_x = kernel_matrix(kernelx_f, X, X)
+        K_y = kernel_matrix(kernely_f, Y, Y)
 
         # calculate normalized hsic value
         if self.bias is True:
-            numerator = hsic_v_statistic(K_x, K_y)
-            denominator = hsic_v_statistic(K_x, K_x) * hsic_v_statistic(K_y, K_y)
+            numerator = hsic_v_statistic_einsum(K_x, K_y)
+            denominator = hsic_v_statistic_einsum(K_x, K_x) * hsic_v_statistic_einsum(
+                K_y, K_y
+            )
         else:
-            numerator = hsic_u_statistic(K_x, K_y)
-            denominator = hsic_u_statistic(K_x, K_x) * hsic_u_statistic(K_y, K_y)
+            numerator = hsic_u_statistic_einsum(K_x, K_y)
+            denominator = hsic_u_statistic_einsum(K_x, K_x) * hsic_u_statistic_einsum(
+                K_y, K_y
+            )
 
         return numerator / np.sqrt(denominator)
 
@@ -193,13 +192,13 @@ class HSICRBFSampler(objax.Module):
         self.kernel_X = RBFSampler(
             n_rff=self.n_rff,
             length_scale=length_scale_X,
-            center=True,
+            center=False,
             seed=self.seed[0],
         )
         self.kernel_Y = RBFSampler(
             n_rff=self.n_rff,
             length_scale=length_scale_Y,
-            center=True,
+            center=False,
             seed=self.seed[1],
         )
 
@@ -224,13 +223,13 @@ class CKARBFSampler(HSICRBFSampler):
         self.kernel_X = RBFSampler(
             n_rff=self.n_rff,
             length_scale=length_scale_X,
-            center=True,
+            center=False,
             seed=self.seed[0],
         )
         self.kernel_Y = RBFSampler(
             n_rff=self.n_rff,
             length_scale=length_scale_Y,
-            center=True,
+            center=False,
             seed=self.seed[1],
         )
 
@@ -245,7 +244,7 @@ class CKARBFSampler(HSICRBFSampler):
         return numerator / np.sqrt(denominator)
 
 
-def hsic_u_statistic(K_x: np.ndarray, K_y: np.ndarray) -> np.ndarray:
+def hsic_u_statistic_einsum(K_x: np.ndarray, K_y: np.ndarray) -> np.ndarray:
     """
     Calculate the unbiased statistic
     """
@@ -262,39 +261,47 @@ def hsic_u_statistic(K_x: np.ndarray, K_y: np.ndarray) -> np.ndarray:
     # Term 3
     c = 2 * math.factorial(n_samples - 3) / math.factorial(n_samples)
     C = np.einsum("ij,ik->", K_x, K_y)
-    return a * A + b * B - c * C
+    return a * A.squeeze() + b * B.squeeze() - c * C.squeeze()
 
 
-def hsic_u_statistic_fast(K_x: np.ndarray, K_y: np.ndarray) -> np.ndarray:
+def hsic_u_statistic_dot(K_x: JaxArray, K_y: JaxArray) -> JaxArray:
     """
-    Calculate the unbiased statistic (vectorized)
+    Calculate the unbiased statistic
     """
     n_samples = K_x.shape[0]
 
     K_xd = K_x - np.diag(np.diag(K_x))
     K_yd = K_y - np.diag(np.diag(K_y))
-    K_xy = K_xd @ K_yd
+    K_xy = K_xd @ K_yd.T
 
     # Term 1
     a = 1 / n_samples / (n_samples - 3)
     A = np.trace(K_xy)
 
     # Term 2
+    ones_v = np.ones((n_samples, 1))
     b = a / (n_samples - 1) / (n_samples - 2)
-    B = np.sum(K_xd) * np.sum(K_yd)
+    B = ones_v.T @ K_xd @ ones_v @ ones_v.T @ K_yd @ ones_v
 
     # Term 3
     c = (a * 2) / (n_samples - 2)
-    C = np.sum(K_xy)
-    return a * A + b * B - c * C
+    C = ones_v.T @ K_xy @ ones_v
+    return a * A.squeeze() + b * B.squeeze() - c * C.squeeze()
 
 
-def hsic_v_statistic(K_x, K_y):
+def hsic_v_statistic_einsum(K_x, K_y):
     n_samples = K_x.shape[0]
     A = np.einsum("ij,ij->", K_x, K_y) / n_samples ** 2
     B = np.einsum("ij,kl->", K_x, K_y) / n_samples ** 4
     C = np.einsum("ij,ik->", K_x, K_y) / n_samples ** 3
     return A + B - 2 * C
+
+
+def hsic_v_statistic_trace(K_x, K_y):
+    n_samples = K_x.shape[0]
+    K_xc = centering(K_x)
+    K_yc = centering(K_y)
+    return np.einsum("ij,ij->", K_xc, K_yc) / n_samples ** 2
 
 
 def hsic_v_statistic_rff(Z_x, Z_y):
@@ -303,13 +310,6 @@ def hsic_v_statistic_rff(Z_x, Z_y):
     Z_y = Z_y - np.mean(Z_y, axis=0)
     featCov = np.dot(Z_x.T, Z_y) / n_samples
     return np.linalg.norm(featCov) ** 2
-
-
-def hsic_v_statistic_faster(K_x, K_y):
-    n_samples = K_x.shape[0]
-    K_xc = centering(K_x)
-    K_yc = centering(K_y)
-    return np.einsum("ij,ij->", K_xc, K_yc) / n_samples ** 2
 
 
 # def hsic(

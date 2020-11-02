@@ -131,4 +131,4 @@ def rbf_kernel(
     y = y / length_scale
 
     # return the ard kernel
-    return variance * np.exp(-sqeuclidean_distance(x, y))
+    return variance * np.exp(-0.5 * sqeuclidean_distance(x, y))

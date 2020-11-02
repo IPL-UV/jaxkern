@@ -1,7 +1,7 @@
 import jax.numpy as np
 import objax
 from objax.typing import JaxArray
-from jaxkern.utils import kernel_mat
+from jaxkern.kernels.utils import kernel_matrix
 from jaxkern.kernels.base import Kernel
 
 
@@ -33,7 +33,7 @@ class Linear(Kernel):
         kernel_mat : JaxArray
             the kernel matrix, (n_samples, m_samples
         """
-        return kernel_mat(
+        return kernel_matrix(
             linear_kernel,
             X,
             Y,

@@ -34,7 +34,7 @@ class RBFSampler(objax.Module):
         self.n_rff = n_rff
         self.length_scale = objax.TrainVar(np.array([length_scale]))
         self.center = center
-        self.rng = objax.RandomState(seed)
+        self.rng = objax.random.Generator(seed)
 
     def __call__(self, X: np.ndarray) -> np.ndarray:
         """Calculates projection matrix

@@ -1,12 +1,14 @@
+import jax
 import jax.numpy as np
 import numpy as onp
-
-# from jaxkern.kernels import rbf_kernel, covariance_matrix, gram
+import pytest
+import chex
 from jaxkern.utils import centering
-from sklearn.metrics.pairwise import rbf_kernel as rbf_sklearn
+from sklearn.gaussian_process.kernels import RBF as rbf_sklearn
 from sklearn.preprocessing import KernelCenterer
 
-from jaxkern.kernels.rbf import RBF
+from jaxkern.kernels.stationary import RBF, rbf_kernel
+from jaxkern.kernels.utils import kernel_matrix
 
 onp.random.seed(123)
 
@@ -31,6 +33,33 @@ def test_rbf_diag_shape():
     Kdiag = RBF().Kdiag(X)
 
     assert Kdiag.shape == (100,)
+
+
+@pytest.mark.parametrize("X", [rng.randn(100, 1), rng.randn(100, 2), rng.randn(2, 10)])
+@pytest.mark.parametrize("length_scale", [0.1, 1.0, 10.0])
+def test_rbf_result(X, length_scale):
+
+    rbf_kern = jax.partial(
+        rbf_kernel,
+        length_scale,
+        1.0,
+    )
+
+    K = kernel_matrix(rbf_kern, X, X)
+    K_sk = rbf_sklearn(length_scale=length_scale)(X, X)
+
+    chex.assert_tree_all_close(np.linalg.norm(K), np.linalg.norm(np.array(K_sk)))
+
+
+@pytest.mark.parametrize("X", [rng.randn(100, 1), rng.randn(100, 3), rng.randn(2, 10)])
+@pytest.mark.parametrize("length_scale", [0.1, 1.0, 10.0])
+def test_rbf_f_result(X, length_scale):
+
+    K = rbf_kernel(length_scale, 1.0, X[0], X[1])
+
+    K_sk = rbf_sklearn(length_scale=length_scale)(X[0][None, :], X[1][None, :])
+
+    chex.assert_tree_all_close(K, K_sk, atol=1e-5)
 
 
 if __name__ == "__main__":
