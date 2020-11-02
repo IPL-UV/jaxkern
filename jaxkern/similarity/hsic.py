@@ -5,7 +5,6 @@ import jax
 import jax.numpy as np
 import objax
 
-from jaxkern.dependence import nhsic_cka
 from jaxkern.dist import distmat, sqeuclidean_distance
 from jaxkern.kernels.approx import RBFSampler
 from jaxkern.kernels.linear import Linear, linear_kernel
@@ -313,325 +312,325 @@ def hsic_v_statistic_faster(K_x, K_y):
     return np.einsum("ij,ij->", K_xc, K_yc) / n_samples ** 2
 
 
-def hsic(
-    X: np.ndarray,
-    Y: np.ndarray,
-    kernel: Callable,
-    params_x: Dict[str, float],
-    params_y: Dict[str, float],
-    bias: bool = False,
-) -> float:
-    """Normalized HSIC (Tangent Kernel Alignment)
-
-    A normalized variant of HSIC method which divides by
-    the HS-Norm of each dataset.
-
-    Parameters
-    ----------
-    X : jax.numpy.ndarray
-        the input value for one dataset
-
-    Y : jax.numpy.ndarray
-        the input value for the second dataset
-
-    kernel : Callable
-        the kernel function to be used for each of the kernel
-        calculations
-
-    params_x : Dict[str, float]
-        a dictionary of parameters to be used for calculating the
-        kernel function for X
-
-    params_y : Dict[str, float]
-        a dictionary of parameters to be used for calculating the
-        kernel function for Y
-
-    Returns
-    -------
-    cka_value : float
-        the normalized hsic value.
-
-    Notes
-    -----
-
-        This is a metric that is similar to the correlation, [0,1]
-    """
-    # kernel matrix
-    Kx = covariance_matrix(kernel, params_x, X, X)
-    Ky = covariance_matrix(kernel, params_y, Y, Y)
-
-    Kx = centering(Kx)
-    Ky = centering(Ky)
-
-    hsic_value = np.sum(Kx * Ky)
-    if bias:
-        bias = 1 / (Kx.shape[0] ** 2)
-    else:
-        bias = 1 / (Kx.shape[0] - 1) ** 2
-    return bias * hsic_value
-
-
-def nhsic_cka(
-    X: np.ndarray,
-    Y: np.ndarray,
-    kernel: Callable,
-    params_x: Dict[str, float],
-    params_y: Dict[str, float],
-) -> float:
-    """Normalized HSIC (Tangent Kernel Alignment)
-
-    A normalized variant of HSIC method which divides by
-    the HS-Norm of each dataset.
-
-    Parameters
-    ----------
-    X : jax.numpy.ndarray
-        the input value for one dataset
-
-    Y : jax.numpy.ndarray
-        the input value for the second dataset
-
-    kernel : Callable
-        the kernel function to be used for each of the kernel
-        calculations
-
-    params_x : Dict[str, float]
-        a dictionary of parameters to be used for calculating the
-        kernel function for X
-
-    params_y : Dict[str, float]
-        a dictionary of parameters to be used for calculating the
-        kernel function for Y
-
-    Returns
-    -------
-    cka_value : float
-        the normalized hsic value.
-
-    Notes
-    -----
-
-        This is a metric that is similar to the correlation, [0,1]
-
-    References
-    ----------
-    """
-    # calculate hsic normally (numerator)
-    # Pxy = hsic(X, Y, kernel, params_x, params_y)
-
-    # # calculate denominator (normalize)
-    # Px = np.sqrt(hsic(X, X, kernel, params_x, params_x))
-    # Py = np.sqrt(hsic(Y, Y, kernel, params_y, params_y))
-
-    # # print(Pxy, Px, Py)
+# def hsic(
+#     X: np.ndarray,
+#     Y: np.ndarray,
+#     kernel: Callable,
+#     params_x: Dict[str, float],
+#     params_y: Dict[str, float],
+#     bias: bool = False,
+# ) -> float:
+#     """Normalized HSIC (Tangent Kernel Alignment)
+
+#     A normalized variant of HSIC method which divides by
+#     the HS-Norm of each dataset.
+
+#     Parameters
+#     ----------
+#     X : jax.numpy.ndarray
+#         the input value for one dataset
+
+#     Y : jax.numpy.ndarray
+#         the input value for the second dataset
+
+#     kernel : Callable
+#         the kernel function to be used for each of the kernel
+#         calculations
+
+#     params_x : Dict[str, float]
+#         a dictionary of parameters to be used for calculating the
+#         kernel function for X
+
+#     params_y : Dict[str, float]
+#         a dictionary of parameters to be used for calculating the
+#         kernel function for Y
+
+#     Returns
+#     -------
+#     cka_value : float
+#         the normalized hsic value.
+
+#     Notes
+#     -----
+
+#         This is a metric that is similar to the correlation, [0,1]
+#     """
+#     # kernel matrix
+#     Kx = covariance_matrix(kernel, params_x, X, X)
+#     Ky = covariance_matrix(kernel, params_y, Y, Y)
+
+#     Kx = centering(Kx)
+#     Ky = centering(Ky)
+
+#     hsic_value = np.sum(Kx * Ky)
+#     if bias:
+#         bias = 1 / (Kx.shape[0] ** 2)
+#     else:
+#         bias = 1 / (Kx.shape[0] - 1) ** 2
+#     return bias * hsic_value
+
+
+# def nhsic_cka(
+#     X: np.ndarray,
+#     Y: np.ndarray,
+#     kernel: Callable,
+#     params_x: Dict[str, float],
+#     params_y: Dict[str, float],
+# ) -> float:
+#     """Normalized HSIC (Tangent Kernel Alignment)
+
+#     A normalized variant of HSIC method which divides by
+#     the HS-Norm of each dataset.
+
+#     Parameters
+#     ----------
+#     X : jax.numpy.ndarray
+#         the input value for one dataset
+
+#     Y : jax.numpy.ndarray
+#         the input value for the second dataset
+
+#     kernel : Callable
+#         the kernel function to be used for each of the kernel
+#         calculations
+
+#     params_x : Dict[str, float]
+#         a dictionary of parameters to be used for calculating the
+#         kernel function for X
+
+#     params_y : Dict[str, float]
+#         a dictionary of parameters to be used for calculating the
+#         kernel function for Y
+
+#     Returns
+#     -------
+#     cka_value : float
+#         the normalized hsic value.
+
+#     Notes
+#     -----
+
+#         This is a metric that is similar to the correlation, [0,1]
+
+#     References
+#     ----------
+#     """
+#     # calculate hsic normally (numerator)
+#     # Pxy = hsic(X, Y, kernel, params_x, params_y)
+
+#     # # calculate denominator (normalize)
+#     # Px = np.sqrt(hsic(X, X, kernel, params_x, params_x))
+#     # Py = np.sqrt(hsic(Y, Y, kernel, params_y, params_y))
+
+#     # # print(Pxy, Px, Py)
 
-    # # kernel tangent alignment value (normalized hsic)
-    # cka_value = Pxy / (Px * Py)
-    Kx = covariance_matrix(kernel, params_x, X, X)
-    Ky = covariance_matrix(kernel, params_y, Y, Y)
+#     # # kernel tangent alignment value (normalized hsic)
+#     # cka_value = Pxy / (Px * Py)
+#     Kx = covariance_matrix(kernel, params_x, X, X)
+#     Ky = covariance_matrix(kernel, params_y, Y, Y)
 
-    Kx = centering(Kx)
-    Ky = centering(Ky)
+#     Kx = centering(Kx)
+#     Ky = centering(Ky)
 
-    cka_value = np.sum(Kx * Ky) / np.linalg.norm(Kx) / np.linalg.norm(Ky)
+#     cka_value = np.sum(Kx * Ky) / np.linalg.norm(Kx) / np.linalg.norm(Ky)
 
-    return cka_value
+#     return cka_value
 
 
-def nhsic_nbs(
-    X: np.ndarray,
-    Y: np.ndarray,
-    kernel: Callable,
-    params_x: Dict[str, float],
-    params_y: Dict[str, float],
-) -> float:
-    """Normalized Bures Similarity (NBS)
+# def nhsic_nbs(
+#     X: np.ndarray,
+#     Y: np.ndarray,
+#     kernel: Callable,
+#     params_x: Dict[str, float],
+#     params_y: Dict[str, float],
+# ) -> float:
+#     """Normalized Bures Similarity (NBS)
 
-    A normalized variant of HSIC method which divides by
-    the HS-Norm of the eigenvalues of each dataset.
+#     A normalized variant of HSIC method which divides by
+#     the HS-Norm of the eigenvalues of each dataset.
 
-    ..math::
-        \\rho(K_x, K_y) = \\
-        \\text{Tr} ( K_x^{1/2} K_y K_x^{1/2)})^{1/2} \\
-        \ \\text{Tr} (K_x) \\text{Tr} (K_y)
+#     ..math::
+#         \\rho(K_x, K_y) = \\
+#         \\text{Tr} ( K_x^{1/2} K_y K_x^{1/2)})^{1/2} \\
+#         \ \\text{Tr} (K_x) \\text{Tr} (K_y)
 
-    Parameters
-    ----------
-    X : jax.numpy.ndarray
-        the input value for one dataset
+#     Parameters
+#     ----------
+#     X : jax.numpy.ndarray
+#         the input value for one dataset
 
-    Y : jax.numpy.ndarray
-        the input value for the second dataset
+#     Y : jax.numpy.ndarray
+#         the input value for the second dataset
 
-    kernel : Callable
-        the kernel function to be used for each of the kernel
-        calculations
+#     kernel : Callable
+#         the kernel function to be used for each of the kernel
+#         calculations
 
-    params_x : Dict[str, float]
-        a dictionary of parameters to be used for calculating the
-        kernel function for X
+#     params_x : Dict[str, float]
+#         a dictionary of parameters to be used for calculating the
+#         kernel function for X
 
-    params_y : Dict[str, float]
-        a dictionary of parameters to be used for calculating the
-        kernel function for Y
+#     params_y : Dict[str, float]
+#         a dictionary of parameters to be used for calculating the
+#         kernel function for Y
 
-    Returns
-    -------
-    cka_value : float
-        the normalized hsic value.
+#     Returns
+#     -------
+#     cka_value : float
+#         the normalized hsic value.
 
-    Notes
-    -----
+#     Notes
+#     -----
 
-        This is a metric that is similar to the correlation, [0,1]
+#         This is a metric that is similar to the correlation, [0,1]
 
-    References
-    ----------
+#     References
+#     ----------
 
-    @article{JMLR:v18:16-296,
-    author  = {Austin J. Brockmeier and Tingting Mu and Sophia Ananiadou and John Y. Goulermas},
-    title   = {Quantifying the Informativeness of Similarity Measurements},
-    journal = {Journal of Machine Learning Research},
-    year    = {2017},
-    volume  = {18},
-    number  = {76},
-    pages   = {1-61},
-    url     = {http://jmlr.org/papers/v18/16-296.html}
-    }
-    """
-    # calculate hsic normally (numerator)
-    # Pxy = hsic(X, Y, kernel, params_x, params_y)
+#     @article{JMLR:v18:16-296,
+#     author  = {Austin J. Brockmeier and Tingting Mu and Sophia Ananiadou and John Y. Goulermas},
+#     title   = {Quantifying the Informativeness of Similarity Measurements},
+#     journal = {Journal of Machine Learning Research},
+#     year    = {2017},
+#     volume  = {18},
+#     number  = {76},
+#     pages   = {1-61},
+#     url     = {http://jmlr.org/papers/v18/16-296.html}
+#     }
+#     """
+#     # calculate hsic normally (numerator)
+#     # Pxy = hsic(X, Y, kernel, params_x, params_y)
 
-    # # calculate denominator (normalize)
-    # Px = np.sqrt(hsic(X, X, kernel, params_x, params_x))
-    # Py = np.sqrt(hsic(Y, Y, kernel, params_y, params_y))
+#     # # calculate denominator (normalize)
+#     # Px = np.sqrt(hsic(X, X, kernel, params_x, params_x))
+#     # Py = np.sqrt(hsic(Y, Y, kernel, params_y, params_y))
 
-    # # print(Pxy, Px, Py)
+#     # # print(Pxy, Px, Py)
 
-    # # kernel tangent alignment value (normalized hsic)
-    # cka_value = Pxy / (Px * Py)
-    Kx = covariance_matrix(kernel, params_x, X, X)
-    Ky = covariance_matrix(kernel, params_y, Y, Y)
+#     # # kernel tangent alignment value (normalized hsic)
+#     # cka_value = Pxy / (Px * Py)
+#     Kx = covariance_matrix(kernel, params_x, X, X)
+#     Ky = covariance_matrix(kernel, params_y, Y, Y)
 
-    Kx = centering(Kx)
-    Ky = centering(Ky)
+#     Kx = centering(Kx)
+#     Ky = centering(Ky)
 
-    # numerator
-    numerator = np.real(np.linalg.eigvals(np.dot(Kx, Ky)))
+#     # numerator
+#     numerator = np.real(np.linalg.eigvals(np.dot(Kx, Ky)))
 
-    # clip rogue numbers
-    numerator = np.sqrt(np.clip(numerator, 0.0))
+#     # clip rogue numbers
+#     numerator = np.sqrt(np.clip(numerator, 0.0))
 
-    numerator = np.sum(numerator)
+#     numerator = np.sum(numerator)
 
-    # denominator
-    denominator = np.sqrt(np.trace(Kx) * np.trace(Ky))
-
-    # return nbs value
-    return numerator / denominator
+#     # denominator
+#     denominator = np.sqrt(np.trace(Kx) * np.trace(Ky))
+
+#     # return nbs value
+#     return numerator / denominator
 
-
-def nhsic_ka(
-    X: np.ndarray,
-    Y: np.ndarray,
-    kernel: Callable,
-    params_x: Dict[str, float],
-    params_y: Dict[str, float],
-) -> float:
+
+# def nhsic_ka(
+#     X: np.ndarray,
+#     Y: np.ndarray,
+#     kernel: Callable,
+#     params_x: Dict[str, float],
+#     params_y: Dict[str, float],
+# ) -> float:
 
-    Kx = covariance_matrix(kernel, params_x, X, X)
-    Ky = covariance_matrix(kernel, params_y, Y, Y)
+#     Kx = covariance_matrix(kernel, params_x, X, X)
+#     Ky = covariance_matrix(kernel, params_y, Y, Y)
 
-    cka_value = np.sum(Kx * Ky) / np.linalg.norm(Kx) / np.linalg.norm(Ky)
+#     cka_value = np.sum(Kx * Ky) / np.linalg.norm(Kx) / np.linalg.norm(Ky)
 
-    return cka_value
+#     return cka_value
 
 
-def nhsic_cca(
-    X: np.ndarray,
-    Y: np.ndarray,
-    kernel: Callable,
-    params_x: Dict[str, float],
-    params_y: Dict[str, float],
-    epsilon: float = 1e-5,
-    bias: bool = False,
-) -> float:
-    """Normalized HSIC (Tangent Kernel Alignment)
+# def nhsic_cca(
+#     X: np.ndarray,
+#     Y: np.ndarray,
+#     kernel: Callable,
+#     params_x: Dict[str, float],
+#     params_y: Dict[str, float],
+#     epsilon: float = 1e-5,
+#     bias: bool = False,
+# ) -> float:
+#     """Normalized HSIC (Tangent Kernel Alignment)
 
-    A normalized variant of HSIC method which divides by
-    the HS-Norm of each dataset.
+#     A normalized variant of HSIC method which divides by
+#     the HS-Norm of each dataset.
 
-    Parameters
-    ----------
-    X : jax.numpy.ndarray
-        the input value for one dataset
+#     Parameters
+#     ----------
+#     X : jax.numpy.ndarray
+#         the input value for one dataset
 
-    Y : jax.numpy.ndarray
-        the input value for the second dataset
+#     Y : jax.numpy.ndarray
+#         the input value for the second dataset
 
-    kernel : Callable
-        the kernel function to be used for each of the kernel
-        calculations
+#     kernel : Callable
+#         the kernel function to be used for each of the kernel
+#         calculations
 
-    params_x : Dict[str, float]
-        a dictionary of parameters to be used for calculating the
-        kernel function for X
+#     params_x : Dict[str, float]
+#         a dictionary of parameters to be used for calculating the
+#         kernel function for X
 
-    params_y : Dict[str, float]
-        a dictionary of parameters to be used for calculating the
-        kernel function for Y
+#     params_y : Dict[str, float]
+#         a dictionary of parameters to be used for calculating the
+#         kernel function for Y
 
-    Returns
-    -------
-    cka_value : float
-        the normalized hsic value.
+#     Returns
+#     -------
+#     cka_value : float
+#         the normalized hsic value.
 
-    Notes
-    -----
+#     Notes
+#     -----
 
-        This is a metric that is similar to the correlation, [0,1]
-    """
-    n_samples = X.shape[0]
+#         This is a metric that is similar to the correlation, [0,1]
+#     """
+#     n_samples = X.shape[0]
 
-    # kernel matrix
-    Kx = gram(kernel, params_x, X, X)
-    Ky = gram(kernel, params_y, Y, Y)
+#     # kernel matrix
+#     Kx = gram(kernel, params_x, X, X)
+#     Ky = gram(kernel, params_y, Y, Y)
 
-    # center kernel matrices
-    Kx = centering(Kx)
-    Ky = centering(Ky)
+#     # center kernel matrices
+#     Kx = centering(Kx)
+#     Ky = centering(Ky)
 
-    K_id = np.eye(Kx.shape[0])
-    Kx_inv = np.linalg.inv(Kx + epsilon * n_samples * K_id)
-    Ky_inv = np.linalg.inv(Ky + epsilon * n_samples * K_id)
+#     K_id = np.eye(Kx.shape[0])
+#     Kx_inv = np.linalg.inv(Kx + epsilon * n_samples * K_id)
+#     Ky_inv = np.linalg.inv(Ky + epsilon * n_samples * K_id)
 
-    Rx = np.dot(Kx, Kx_inv)
-    Ry = np.dot(Ky, Ky_inv)
+#     Rx = np.dot(Kx, Kx_inv)
+#     Ry = np.dot(Ky, Ky_inv)
 
-    hsic_value = np.sum(Rx * Ry)
+#     hsic_value = np.sum(Rx * Ry)
 
-    if bias:
-        bias = 1 / (Kx.shape[0] ** 2)
-    else:
-        bias = 1 / (Kx.shape[0] - 1) ** 2
-    return bias * hsic_value
+#     if bias:
+#         bias = 1 / (Kx.shape[0] ** 2)
+#     else:
+#         bias = 1 / (Kx.shape[0] - 1) ** 2
+#     return bias * hsic_value
 
 
-def _hsic_uncentered(
-    X: np.ndarray,
-    Y: np.ndarray,
-    kernel: Callable,
-    params_x: Dict[str, float],
-    params_y: Dict[str, float],
-) -> float:
-    """A method to calculate the uncentered HSIC version"""
-    # kernel matrix
-    Kx = gram(kernel, params_x, X, X)
-    Ky = gram(kernel, params_y, Y, Y)
+# def _hsic_uncentered(
+#     X: np.ndarray,
+#     Y: np.ndarray,
+#     kernel: Callable,
+#     params_x: Dict[str, float],
+#     params_y: Dict[str, float],
+# ) -> float:
+#     """A method to calculate the uncentered HSIC version"""
+#     # kernel matrix
+#     Kx = gram(kernel, params_x, X, X)
+#     Ky = gram(kernel, params_y, Y, Y)
 
-    #
-    K = np.dot(Kx, Ky.T)
+#     #
+#     K = np.dot(Kx, Ky.T)
 
-    hsic_value = np.mean(K)
+#     hsic_value = np.mean(K)
 
-    return hsic_value
+#     return hsic_value
