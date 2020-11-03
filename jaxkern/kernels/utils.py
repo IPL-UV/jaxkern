@@ -84,6 +84,59 @@ def centering_matrix(n_samples: int) -> JaxArray:
     return np.eye(n_samples) - (1.0 / n_samples) * np.ones((n_samples, n_samples))
 
 
+def centering_kernel(kernel_mat: JaxArray) -> JaxArray:
+    """Calculates the centering matrix for the kernel
+    Particularly useful in unsupervised kernel methods like
+    HSIC and MMD.
+
+    Parameters
+    ----------
+    kernel_mat : JaxArray
+        PSD kernel matrix, (n_samples, n_samples)
+
+    Returns
+    -------
+    centered_kernel_mat : JaxArray
+        centered PSD kernel matrix, (n_samples, n_samples)
+    """
+    # get centering matrix
+    H = centering_matrix(np.shape(kernel_mat)[0])
+
+    # center kernel matrix
+    kernel_mat = np.einsum("ij,jk,kl->il", H, kernel_mat, H)
+
+    return kernel_mat
+
+
+def center_projection(projection: JaxArray) -> JaxArray:
+    """Centers a projection matrix Z
+
+    Centers the projection matrix which approximates a PSD
+    kernel matrix (e.g. Nystrom, Random Fourier Features).
+
+    .. math::
+
+        Z_c = HZ
+
+    Parameters
+    ----------
+    projection : JaxArray
+        A projection matrix, (n_samples, n_features)
+
+    Returns
+    -------
+    centered_projection : JaxArray
+        centered PSD kernel matrix, (n_samples, n_features)
+    """
+    # get centering matrix
+    H = centering_matrix(np.shape(projection)[0])
+
+    # center projection matrix
+    projection = np.dot(H, projection)
+
+    return projection
+
+
 def gram(
     func: Callable,
     params: Dict,
