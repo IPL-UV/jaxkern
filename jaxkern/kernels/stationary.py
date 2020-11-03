@@ -36,9 +36,7 @@ class Stationary(Kernel):
         )
 
     def scale(self, X: np.ndarray) -> np.ndarray:
-        return X / np.clip(
-            jax.nn.softplus(self.length_scale.value), a_min=0.0, a_max=10.0
-        )
+        return X / jax.nn.softplus(self.length_scale.value)
 
     def Kdiag(self, X: np.ndarray) -> np.ndarray:
         return np.abs(self.variance.value) * np.ones(X.shape[0])
@@ -54,7 +52,12 @@ class RBF(Stationary):
         variance = jax.nn.softplus(self.variance.value)
 
         # numerical stability
-        dists = np.clip(self.squared_distance(X, Y), a_min=0.0, a_max=np.inf)
+        dists = self.squared_distance(
+            X,
+            Y,
+        )
+
+        # dists = np.clip(dists, a_min=0.0, a_max=np.inf)
 
         return variance * np.exp(-dists / 2.0)
 
@@ -81,9 +84,10 @@ class RationalQuadratic(Stationary):
         variance = jax.nn.softplus(self.variance.value)
 
         # numerical stability
-        dists = np.clip(self.squared_distance(X, Y), a_min=0.0, a_max=np.inf)
+        dists = self.squared_distance(X, Y)
+        # dists = np.clip(self.squared_distance(X, Y), a_min=0.0, a_max=np.inf)
 
-        alpha = variance = jax.nn.softplus(self.alpha.value)
+        alpha = jax.nn.softplus(self.alpha.value)
 
         return variance * (1 + 0.5 * dists / alpha) ** (-alpha)
 

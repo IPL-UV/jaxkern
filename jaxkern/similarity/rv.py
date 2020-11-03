@@ -6,87 +6,102 @@ import objax
 from objax.typing import JaxArray
 from jaxkern.kernels.linear import Linear, linear_kernel
 from jaxkern.kernels.stationary import RBF
-from jaxkern.similarity.hsic import CKA, hsic_u_statistic, hsic_v_statistic
+from jaxkern.similarity.hsic import (
+    CKA,
+    hsic_u_statistic_einsum,
+    hsic_v_statistic_einsum,
+)
 
 
-class RVCoeff(CKA):
-    """Calculates the RV coefficient
-
-    This stands for the rho-Vector component and it is a non-linear
-    extension to the Pearson correlation coefficient.
+def pearson_corr_coeff(x, y):
+    """Pearson Correlation Coefficient
 
     .. math::
-        :nowrap:
 
-        \\begin{equation}
-        \\rho V(\mathbf{x,y}) = \\
-           \\frac{\\text{Tr}\left( \mathbf{xx}^\\top \\
-           \mathbf{yy}^\\top \\right)}{\\
-           \sqrt{\\text{Tr}\left( \\
-           \mathbf{xx}^\\top \\right)^2\\
-           \\text{Tr}\\left( \mathbf{yy}^\\top \\
-           \\right)^2}}
-        \\end{equation}
+        \\rho = \\frac{\\sum (x - m_x) (y - m_y)}
+                 {\\sqrt{\\sum (x - m_x)^2 \\sum (y - m_y)^2}}
 
-    where 
-    :math:`\mathbf{x},\mathbf{y} \in \mathbb{R}^{N \\times D}`
+    where :math:`m_x` is the mean of the vector :math:`x` and :math:`m_y` is
+    the mean of the vector :math:`y`.
 
     Parameters
     ----------
-    kernel_X : Callable
-        the kernel function used to 
-
-    Y : jax.numpy.ndarray 
-        the input array, (n_samples, m_features)
+    x : JaxArray,
+        vector I of  inputs, (n_samples,)
+    y : JaxArray,
+        vector II of inputs, (n_samples,)
 
     Returns
-    -------
-    coeff : float
-        the rv coefficient
-
-    Notes
-    -----
-
-        This traditional approach is the RVCoefis simply the HSIC method but with a linear kernel.
-
-    References
-    ----------
-
-    .. [1] Josse & Holmes, *Measuring Multivariate Association and Beyond*,
-           Statistics Surveys, 2016, Volume 10, pg. 132-167
-
+    ------
+    rho : JaxArray
+        pearson correlation coefficient, ()
     """
 
-    def __init__(
-        self,
-        kernel_X: Callable[[JaxArray, JaxArray], JaxArray] = Linear(),
-        kernel_Y: Callable[[JaxArray, JaxArray], JaxArray] = Linear(),
-        bias: bool = True,
-    ):
-        super().__init__(kernel_X=kernel_X, kernel_Y=kernel_Y, bias=bias)
+    # remove the mean
+    x -= np.mean(x)
+    y -= np.mean(y)
+
+    # calculate the covariance
+    cov_xy = np.dot(x, y)
+
+    # calculate the roots
+    den = np.sqrt(np.sum(x ** 2) * np.sum(y ** 2))
+
+    return cov_xy / den
 
 
-def rv_coeff(X: JaxArray, Y: JaxArray) -> JaxArray:
+def sub_pearson_corr_coeff(X, Y):
+    """Pearson Correlation Coefficient applied Dimension-wise
+
+    .. math::
+
+        \\rho = \\frac{1}{D} \\sum_{d}^D\\rho\\
+            (\\mathbf{X}_d,\\mathbf{Y}_d)
+
+    where :math:`\\mathbf{X,Y} \in \mathbb{R}^{N \\times D}`
+
+    Parameters
+    ----------
+    x : JaxArray,
+        vector I of  inputs, (n_samples, n_features)
+    y : JaxArray,
+        vector II of inputs, (n_samples, n_features)
+
+    Returns
+    ------
+    rho : JaxArray
+        pearson correlation coefficient, ()
+    """
+    n_features = X.shape[1]
+
+    rhos = jax.vmap(pearson_corr_coeff, in_axes=(0, 1))(X.T, Y.T)
+
+    return np.sum(rhos ** 2) / n_features
+
+
+def rv_coeff(
+    X: JaxArray, Y: JaxArray, center: bool = False, bias: bool = True
+) -> JaxArray:
     """Calculates the RV coefficient
 
-    This stands for the rho-Vector component and it is a non-linear
+    This stands for the rho-Vector component and it is a multivariate
     extension to the Pearson correlation coefficient.
 
     .. math::
         :nowrap:
 
         \\begin{equation}
-        \\rho V(\mathbf{x,y}) = \\
-           \\frac{\\text{Tr}\left( \mathbf{xx}^\\top \\
-           \mathbf{yy}^\\top \\right)}{\\
-           \sqrt{\\text{Tr}\left( \\
-           \mathbf{xx}^\\top \\right)^2\\
-           \\text{Tr}\\left( \mathbf{yy}^\\top \\
+        \\rho V(\\mathbf{X,Y}) = \\
+           \\frac{\\text{Tr}\\left( \\mathbf{XX}^\\top \\
+           \\mathbf{YY}^\\top \\right)}{\\
+           \\sqrt{\\text{Tr}\left( \\
+           \\mathbf{XX}^\\top \\right)^2\\
+           \\text{Tr}\\left( \\mathbf{YY}^\\top \\
            \\right)^2}}
         \\end{equation}
 
     where 
-    :math:`\mathbf{x},\mathbf{y} \in \mathbb{R}^{N \\times D}`
+    :math:`\mathbf{X},\mathbf{Y} \in \mathbb{R}^{N \\times D}`
 
     Parameters
     ----------
@@ -113,10 +128,20 @@ def rv_coeff(X: JaxArray, Y: JaxArray) -> JaxArray:
            Statistics Surveys, 2016, Volume 10, pg. 132-167
 
     """
-    return nhsic_cka(X, Y, linear_kernel, {}, {})
+    if center:
+        X -= np.mean(X, axis=1)
+        Y -= np.mean(Y, axis=1)
+
+    # compute kernel matrices
+    K_x = X @ X.T
+    K_y = Y @ Y.T
+
+    return np.einsum("ij,ij->", K_x, K_y) / np.linalg.norm(K_x) / np.linalg.norm(K_y)
 
 
-def rv_coeff_feat(X: JaxArray, Y: JaxArray, bias: bool = True) -> JaxArray:
+def rv_coeff_feat(
+    X: JaxArray, Y: JaxArray, center: bool = False, bias: bool = True
+) -> JaxArray:
     """Calculates the RV coefficient in the feature space
 
     This stands for the rho-Vector component and it is a non-linear
@@ -165,16 +190,16 @@ def rv_coeff_feat(X: JaxArray, Y: JaxArray, bias: bool = True) -> JaxArray:
            Statistics Surveys, 2016, Volume 10, pg. 132-167
 
     """
-
+    if center:
+        X = X - np.mean(X, axis=0)
+        Y = Y - np.mean(Y, axis=0)
     # compute kernel matrices
-    K_x = linear_kernel(X, X)
-    K_y = linear_kernel(Y, Y)
+    Sigma_XY = X.T @ Y
+    Sigma_XX = X.T @ X
+    Sigma_YY = Y.T @ Y
 
-    # calculate centered hsic value
-    if bias is True:
-        numerator = hsic_u_statistic(K_x, K_y)
-        denominator = hsic_v_statistic(K_x, K_x) * hsic_v_statistic(K_y, K_y)
-    else:
-        numerator = hsic_u_statistic(K_x, K_y)
-        denominator = hsic_u_statistic(K_x, K_x) * hsic_u_statistic(K_y, K_y)
-    return numerator / np.sqrt(denominator)
+    return (
+        np.linalg.norm(Sigma_XY) ** 2
+        / np.linalg.norm(Sigma_XX)
+        / np.linalg.norm(Sigma_YY)
+    )
