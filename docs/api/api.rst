@@ -2,14 +2,13 @@ jaxkern API
 ===========
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
    data.rst
-   dependence.rst
+   kernels.rst
    dist.rst
    gp.rst
-   kernels.rst
-   sigma.rst
    similarity.rst
+   density.rst
    utils.rst

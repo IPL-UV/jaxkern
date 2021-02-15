@@ -1,15 +1,30 @@
 import jax
 import jax.numpy as np
+from objax.typing import JaxArray
 
 _float_eps = np.finfo("float").eps
 
 
-def ensure_min_eps(x: jax.numpy.ndarray) -> jax.numpy.ndarray:
+def ensure_min_eps(x: JaxArray) -> JaxArray:
+    """Ensures no overflow or round-off errors"""
     return np.maximum(_float_eps, x)
 
 
-def centering(kernel_mat: jax.numpy.ndarray) -> jax.numpy.ndarray:
-    """Calculates the centering matrix for the kernel"""
+def centering(kernel_mat: JaxArray) -> JaxArray:
+    """Calculates the centering matrix for the kernel
+    Particularly useful in unsupervised kernel methods like
+    HSIC and MMD.
+
+    Parameters
+    ----------
+    kernel_mat : JaxArray
+        PSD kernel matrix, (n_samples, n_samples)
+
+    Returns
+    -------
+    centered_kernel_mat : JaxArray
+        centered PSD kernel matrix, (n_samples, n_samples)
+    """
     n_samples = np.shape(kernel_mat)[0]
 
     identity = np.eye(n_samples)
