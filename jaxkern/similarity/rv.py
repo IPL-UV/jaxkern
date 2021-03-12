@@ -2,8 +2,7 @@ from typing import Callable
 
 import jax
 import jax.numpy as np
-import objax
-from objax.typing import JaxArray
+from chex import Array
 from jaxkern.kernels.linear import Linear, linear_kernel
 from jaxkern.kernels.stationary import RBF
 from jaxkern.similarity.hsic import (
@@ -26,14 +25,14 @@ def pearson_corr_coeff(x, y):
 
     Parameters
     ----------
-    x : JaxArray,
+    x : Array,
         vector I of  inputs, (n_samples,)
-    y : JaxArray,
+    y : Array,
         vector II of inputs, (n_samples,)
 
     Returns
     ------
-    rho : JaxArray
+    rho : Array
         pearson correlation coefficient, ()
     """
 
@@ -62,14 +61,14 @@ def sub_pearson_corr_coeff(X, Y):
 
     Parameters
     ----------
-    x : JaxArray,
+    x : Array,
         vector I of  inputs, (n_samples, n_features)
-    y : JaxArray,
+    y : Array,
         vector II of inputs, (n_samples, n_features)
 
     Returns
     ------
-    rho : JaxArray
+    rho : Array
         pearson correlation coefficient, ()
     """
     n_features = X.shape[1]
@@ -79,9 +78,7 @@ def sub_pearson_corr_coeff(X, Y):
     return np.sum(rhos ** 2) / n_features
 
 
-def rv_coeff(
-    X: JaxArray, Y: JaxArray, center: bool = False, bias: bool = True
-) -> JaxArray:
+def rv_coeff(X: Array, Y: Array, center: bool = False, bias: bool = True) -> Array:
     """Calculates the RV coefficient
 
     This stands for the rho-Vector component and it is a multivariate
@@ -139,9 +136,7 @@ def rv_coeff(
     return np.einsum("ij,ij->", K_x, K_y) / np.linalg.norm(K_x) / np.linalg.norm(K_y)
 
 
-def rv_coeff_feat(
-    X: JaxArray, Y: JaxArray, center: bool = False, bias: bool = True
-) -> JaxArray:
+def rv_coeff_feat(X: Array, Y: Array, center: bool = False, bias: bool = True) -> Array:
     """Calculates the RV coefficient in the feature space
 
     This stands for the rho-Vector component and it is a non-linear

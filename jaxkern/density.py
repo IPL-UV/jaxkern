@@ -5,63 +5,6 @@ import jax
 import jax.numpy as np
 
 
-class KDE(objax.Module):
-    """Kernel Density Estimation (KDE) class
-
-    Parameters
-    ----------
-    samples : JaxArray
-        representative samples to calculate the KDE
-    kernel : Callable[[JaxArray], JaxArray]
-        a callable kernel function class
-    n_grid_points : int
-        the number of grid points for the representative points for
-        the PDF and CDF
-    """
-
-    def __init__(
-        self,
-        samples: JaxArray,
-        kernel_f: Callable[[JaxArray], JaxArray],
-        n_grid_points: int = 50,
-    ):
-        self.samples = samples
-        self.kernel_f = kernel_f
-        self.n_grid_points = n_grid_points
-
-    def pdf(self, X: JaxArray) -> JaxArray:
-        raise NotImplementedError()
-
-    def cdf(self, X: JaxArray) -> JaxArray:
-        raise NotImplementedError()
-
-    def icdf(self, X: JaxArray) -> JaxArray:
-        raise NotImplementedError()
-
-
-class KDEGauss(KDE):
-    """Gaussian Kernel Density Estimation (KDE) class
-
-    Parameters
-    ----------
-    bandwidth : Callable[[JaxArray], JaxArray]
-        a callable kernel function class
-    """
-
-    def __init__(self, samples: JaxArray, bandwidth: float):
-        self.samples = samples
-        self.bandwidth = bandwidth
-
-    def pdf(self, X: JaxArray) -> JaxArray:
-        return kde_pdf_gaussian(X, self.samples, self.bandwidth)
-
-    def cdf(self, X: JaxArray) -> JaxArray:
-        return kde_pdf_gaussian(X, self.samples, self.bandwidth)
-
-    def icdf(self, X: JaxArray) -> JaxArray:
-        raise NotImplementedError()
-
-
 def gaussian_kernel(x: np.ndarray) -> np.ndarray:
     """Gaussian kernel function for KDE"""
     return np.exp(-0.5 * x ** 2) / np.sqrt(2 * np.pi)

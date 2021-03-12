@@ -1,247 +1,25 @@
+from jaxkern.kernels.kernels import covariance_matrix
 import math
 from typing import Callable, Optional
 
 import jax
 import jax.numpy as np
-import objax
-from objax.typing import JaxArray
-
-from jaxkern.dist import distmat, sqeuclidean_distance
-from jaxkern.kernels.approx import RBFSampler
-from jaxkern.kernels.linear import linear_kernel
-from jaxkern.kernels.stationary import rbf_kernel
-from jaxkern.kernels.utils import kernel_matrix
-from jaxkern.utils import centering
+from chex import dataclass, Array
+from jaxkern.kernels.utils import centering_matrix
 
 
-class HSIC(objax.Module):
-    """Hilbert-Schmidt Independence Criterion
+def hsic_biased(
+    kernel_f: Callable, params_X: dataclass, params_Y: dataclass, X: Array, Y: Array
+) -> Array:
 
-    Parameters
-    ----------
-    kernel_X : Callable
-        the kernel matrix to be used for X
-    kernel_Y : Callable
-        the kernel matrix to be used for Y
-    bias : bool
-        the bias term for the hsic method; similar to covariance normalization
-        (default = False)
-    """
+    # calculate the kernel matrices
+    K_x = covariance_matrix(params=params_X, func=kernel_f, x=X, y=X)
+    K_y = covariance_matrix(params=params_Y, func=kernel_f, x=Y, y=Y)
 
-    def __init__(
-        self, kernel_X: Callable, kernel_Y: Callable, bias: bool = True
-    ) -> None:
-        self.kernel_X = kernel_X
-        self.kernel_Y = kernel_Y
-        self.bias = bias
+    # calculate hsic
+    hsic = hsic_v_statistic_trace(K_x, K_y)
 
-    def __call__(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
-
-        # compute kernel matrices
-        K_x = self.kernel_X(X, X)
-        K_y = self.kernel_Y(Y, Y)
-
-        if self.bias is True:
-            return hsic_v_statistic_einsum(K_x, K_y)
-        else:
-            return hsic_u_statistic_einsum(K_x, K_y)
-
-
-class CKA(objax.Module):
-    """Normalized Hilbert-Schmidt Independence Criterion
-
-    Parameters
-    ----------
-    kernel_X : Callable
-        the kernel matrix to be used for X
-    kernel_Y : Callable
-        the kernel matrix to be used for Y
-    bias : bool
-        the bias term for the hsic method; similar to covariance normalization
-        (default = False)
-    """
-
-    def __init__(
-        self, kernel_X: Callable, kernel_Y: Callable, bias: bool = True
-    ) -> None:
-        self.kernel_X = kernel_X
-        self.kernel_Y = kernel_Y
-        self.bias = bias
-
-    def __call__(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
-
-        # compute kernel matrices
-        K_x = self.kernel_X(X, X)
-        K_y = self.kernel_Y(Y, Y)
-
-        # calculate centered hsic value
-        if self.bias is True:
-            numerator = hsic_v_statistic_einsum(K_x, K_y)
-            denominator = hsic_v_statistic_einsum(K_x, K_x) * hsic_v_statistic_einsum(
-                K_y, K_y
-            )
-        else:
-            numerator = hsic_u_statistic_einsum(K_x, K_y)
-            denominator = hsic_u_statistic_einsum(K_x, K_x) * hsic_u_statistic_einsum(
-                K_y, K_y
-            )
-        return numerator / np.sqrt(denominator)
-
-
-class HSICRBF(objax.Module):
-    def __init__(self, sigma_x: Callable, sigma_y: Callable, bias=False) -> None:
-        self.sigma_x = sigma_x
-        self.sigma_y = sigma_y
-        self.bias = bias
-        self.kernel = jax.vmap(rbf_kernel)
-
-    def __call__(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
-
-        # compute kernel matrices
-        sigma_x = self.sigma_x(X, X)
-        sigma_y = self.sigma_y(Y, Y)
-        kernelx_f = jax.partial(rbf_kernel, sigma_x, 1.0)
-        kernely_f = jax.partial(rbf_kernel, sigma_y, 1.0)
-        K_x = kernel_matrix(kernelx_f, X, X)
-        K_y = kernel_matrix(kernely_f, Y, Y)
-
-        if self.bias is True:
-            return hsic_v_statistic_einsum(K_x, K_y)
-        else:
-            return hsic_u_statistic_einsum(K_x, K_y)
-
-        # # center matrices
-        # K_x = centering(K_x)
-        # K_y = centering(K_y)
-
-        # # calculate hsic value
-        # hsic_value = np.sum(K_x * K_y)
-
-        # if self.bias == True:
-        #     bias = 1 / (K_x.shape[0] ** 2)
-        # else:
-        #     bias = 1 / (K_x.shape[0] - 1) ** 2
-        # return bias * hsic_value
-
-
-class CKARBF(objax.Module):
-    def __init__(
-        self,
-        sigma_x: Callable,
-        sigma_y: Callable,
-        n_subsamples: Optional[int] = None,
-        bias: bool = False,
-    ) -> None:
-        self.sigma_x = sigma_x
-        self.sigma_y = sigma_y
-        self.bias = bias
-        self.n_subsamples = n_subsamples
-
-    def __call__(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
-
-        # compute sigma values
-        # compute kernel matrices
-        self.sigma_x_ = self.sigma_x(X, X)
-        self.sigma_y_ = self.sigma_y(Y, Y)
-
-        # compute kernel matrices
-        kernelx_f = jax.partial(rbf_kernel, self.sigma_x_, 1.0)
-        kernely_f = jax.partial(rbf_kernel, self.sigma_y_, 1.0)
-        K_x = kernel_matrix(kernelx_f, X, X)
-        K_y = kernel_matrix(kernely_f, Y, Y)
-
-        # calculate normalized hsic value
-        if self.bias is True:
-            numerator = hsic_v_statistic_einsum(K_x, K_y)
-            denominator = hsic_v_statistic_einsum(K_x, K_x) * hsic_v_statistic_einsum(
-                K_y, K_y
-            )
-        else:
-            numerator = hsic_u_statistic_einsum(K_x, K_y)
-            denominator = hsic_u_statistic_einsum(K_x, K_x) * hsic_u_statistic_einsum(
-                K_y, K_y
-            )
-
-        return numerator / np.sqrt(denominator)
-
-
-class HSICRBFSampler(objax.Module):
-    def __init__(
-        self,
-        n_rff: int = 100,
-        length_scale_X: float = 2.0,
-        length_scale_Y: float = 2.0,
-        n_subsamples: int = 1_000,
-        seed=(123, 42),
-    ) -> None:
-        self.seed = seed
-        self.n_rff = n_rff
-        self.n_subsamples = n_subsamples
-        self.length_scale_X = length_scale_X
-        self.length_scale_Y = length_scale_Y
-
-    def __call__(self, X, Y):
-
-        length_scale_X = self.length_scale_X(
-            X[: self.n_subsamples], X[: self.n_subsamples]
-        )
-        length_scale_Y = self.length_scale_Y(
-            Y[: self.n_subsamples], Y[: self.n_subsamples]
-        )
-
-        self.kernel_X = RBFSampler(
-            n_rff=self.n_rff,
-            length_scale=length_scale_X,
-            center=False,
-            seed=self.seed[0],
-        )
-        self.kernel_Y = RBFSampler(
-            n_rff=self.n_rff,
-            length_scale=length_scale_Y,
-            center=False,
-            seed=self.seed[1],
-        )
-
-        # calculate projection matrices
-        Z_x = self.kernel_X(X)
-        Z_y = self.kernel_Y(Y)
-
-        # calculate centered hsic value
-        return hsic_v_statistic_rff(Z_x, Z_y)
-
-
-class CKARBFSampler(HSICRBFSampler):
-    def __call__(self, X, Y):
-
-        length_scale_X = self.length_scale_X(
-            X[: self.n_subsamples], X[: self.n_subsamples]
-        )
-        length_scale_Y = self.length_scale_Y(
-            Y[: self.n_subsamples], Y[: self.n_subsamples]
-        )
-
-        self.kernel_X = RBFSampler(
-            n_rff=self.n_rff,
-            length_scale=length_scale_X,
-            center=False,
-            seed=self.seed[0],
-        )
-        self.kernel_Y = RBFSampler(
-            n_rff=self.n_rff,
-            length_scale=length_scale_Y,
-            center=False,
-            seed=self.seed[1],
-        )
-
-        # calculate projection matrices
-        Z_x = self.kernel_X(X)
-        Z_y = self.kernel_Y(Y)
-
-        # calculate centered hsic value
-        numerator = hsic_v_statistic_rff(Z_x, Z_y)
-        denominator = hsic_v_statistic_rff(Z_x, Z_x) * hsic_v_statistic_rff(Z_y, Z_y)
-
-        return numerator / np.sqrt(denominator)
+    return hsic
 
 
 def hsic_u_statistic_einsum(K_x: np.ndarray, K_y: np.ndarray) -> np.ndarray:
@@ -264,7 +42,7 @@ def hsic_u_statistic_einsum(K_x: np.ndarray, K_y: np.ndarray) -> np.ndarray:
     return a * A.squeeze() + b * B.squeeze() - c * C.squeeze()
 
 
-def hsic_u_statistic_dot(K_x: JaxArray, K_y: JaxArray) -> JaxArray:
+def hsic_u_statistic_dot(K_x: Array, K_y: Array) -> Array:
     """
     Calculate the unbiased statistic
     """
@@ -298,10 +76,14 @@ def hsic_v_statistic_einsum(K_x, K_y):
 
 
 def hsic_v_statistic_trace(K_x, K_y):
+    # get the samples
     n_samples = K_x.shape[0]
-    K_xc = centering(K_x)
-    K_yc = centering(K_y)
-    return np.einsum("ij,ij->", K_xc, K_yc) / n_samples ** 2
+
+    # get the centering matrix
+    H = centering_matrix(n_samples)
+
+    # calculat HSIC
+    return np.einsum("ij,ji->", K_x @ H, K_y @ H) / n_samples ** 2
 
 
 def hsic_v_statistic_rff(Z_x, Z_y):

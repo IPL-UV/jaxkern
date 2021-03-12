@@ -6,6 +6,11 @@ from jaxkern.dist import pdist_squareform
 from jaxkern.utils import ensure_min_eps
 
 
+def init_ard_params(X, Y, method: str = "median"):
+
+    return None
+
+
 def estimate_sigma_median(X: JaxArray, Y: JaxArray) -> JaxArray:
     """Estimate sigma using the median distance
 

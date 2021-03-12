@@ -1,15 +1,14 @@
 from typing import Callable
 
-import jax
 import jax.numpy as np
 
 from jaxkern.dist import sqeuclidean_distance
 from jaxkern.kernels.stationary import RBF
-from jaxkern.kernels.utils import covariance_matrix, kernel_matrix
-from jaxkern.utils import centering
+from jaxkern.kernels.utils import kernel_matrix
+from chex import Array
 
 
-def distance_corr(X: np.ndarray, Y: np.ndarray) -> float:
+def distance_corr(X: Array, Y: Array) -> float:
     """Distance correlation"""
     a = kernel_matrix(sqeuclidean_distance, X, X)
     b = kernel_matrix(sqeuclidean_distance, Y, Y)
@@ -38,8 +37,8 @@ def distance_corr(X: np.ndarray, Y: np.ndarray) -> float:
 
 
 def energy_distance(
-    X: np.ndarray,
-    Y: np.ndarray,
+    X: Array,
+    Y: Array,
 ) -> float:
     """Distance correlation"""
     n_samples, m_samples = X.shape[0], Y.shape[0]

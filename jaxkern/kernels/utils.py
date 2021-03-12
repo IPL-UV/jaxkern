@@ -2,14 +2,14 @@ from typing import Callable, Dict
 
 import jax
 import jax.numpy as np
-from objax.typing import JaxArray
+from chex import Array
 
 
 def kernel_matrix(
-    kernel_func: Callable[[JaxArray, JaxArray], JaxArray],
-    X: JaxArray,
-    Y: JaxArray,
-) -> JaxArray:
+    kernel_func: Callable[[Array, Array], Array],
+    X: Array,
+    Y: Array,
+) -> Array:
     """Computes the kernel matrix given a kernel function
 
     Given a `Callable` function, we can use the `jax.vmap` function
@@ -18,16 +18,16 @@ def kernel_matrix(
 
     Parameters
     ----------
-    kernel_func : Callable[[JaxArray, JaxArray], JaxArray]
+    kernel_func : Callable[[Array, Array], Array]
         a callable function (kernel or distance)
-    X : JaxArray
+    X : Array
         dataset I (n_samples, n_features)
-    Y : JaxArray
+    Y : Array
         dataset II (m_samples, n_features)
 
     Returns
     -------
-    K : JaxArray
+    K : Array
         the kernel matrix, (n_samples, m_samples)
 
     Notes
@@ -45,19 +45,19 @@ def kernel_matrix(
     return mm(X, Y)
 
 
-def centering(kernel_mat: JaxArray) -> JaxArray:
+def centering(kernel_mat: Array) -> Array:
     """Calculates the centering matrix for the kernel
     Particularly useful in unsupervised kernel methods like
     HSIC and MMD.
 
     Parameters
     ----------
-    kernel_mat : JaxArray
+    kernel_mat : Array
         PSD kernel matrix, (n_samples, n_samples)
 
     Returns
     -------
-    centered_kernel_mat : JaxArray
+    centered_kernel_mat : Array
         centered PSD kernel matrix, (n_samples, n_samples)
     """
     # get centering matrix
@@ -69,7 +69,7 @@ def centering(kernel_mat: JaxArray) -> JaxArray:
     return kernel_mat
 
 
-def centering_matrix(n_samples: int) -> JaxArray:
+def centering_matrix(n_samples: int) -> Array:
     """Calculates the centering matrix H
 
     Parameters
@@ -78,25 +78,25 @@ def centering_matrix(n_samples: int) -> JaxArray:
 
     Returns
     -------
-    H : JaxArray
+    H : Array
         the centering matrix, (n_samples, n_samples)
     """
     return np.eye(n_samples) - (1.0 / n_samples) * np.ones((n_samples, n_samples))
 
 
-def centering_kernel(kernel_mat: JaxArray) -> JaxArray:
+def centering_kernel(kernel_mat: Array) -> Array:
     """Calculates the centering matrix for the kernel
     Particularly useful in unsupervised kernel methods like
     HSIC and MMD.
 
     Parameters
     ----------
-    kernel_mat : JaxArray
+    kernel_mat : Array
         PSD kernel matrix, (n_samples, n_samples)
 
     Returns
     -------
-    centered_kernel_mat : JaxArray
+    centered_kernel_mat : Array
         centered PSD kernel matrix, (n_samples, n_samples)
     """
     # get centering matrix
@@ -108,7 +108,7 @@ def centering_kernel(kernel_mat: JaxArray) -> JaxArray:
     return kernel_mat
 
 
-def center_projection(projection: JaxArray) -> JaxArray:
+def center_projection(projection: Array) -> Array:
     """Centers a projection matrix Z
 
     Centers the projection matrix which approximates a PSD
@@ -120,12 +120,12 @@ def center_projection(projection: JaxArray) -> JaxArray:
 
     Parameters
     ----------
-    projection : JaxArray
+    projection : Array
         A projection matrix, (n_samples, n_features)
 
     Returns
     -------
-    centered_projection : JaxArray
+    centered_projection : Array
         centered PSD kernel matrix, (n_samples, n_features)
     """
     # get centering matrix
@@ -219,3 +219,29 @@ def covariance_matrix(
     mapx1 = jax.vmap(lambda x, y: func(params, x, y), in_axes=(0, None), out_axes=0)
     mapx2 = jax.vmap(lambda x, y: mapx1(x, y), in_axes=(None, 0), out_axes=1)
     return mapx2(x, y)
+
+
+# def centering(kernel_mat: Array) -> Array:
+#     """Calculates the centering matrix for the kernel
+#     Particularly useful in unsupervised kernel methods like
+#     HSIC and MMD.
+
+#     Parameters
+#     ----------
+#     kernel_mat : Array
+#         PSD kernel matrix, (n_samples, n_samples)
+
+#     Returns
+#     -------
+#     centered_kernel_mat : Array
+#         centered PSD kernel matrix, (n_samples, n_samples)
+#     """
+#     n_samples = np.shape(kernel_mat)[0]
+
+#     identity = np.eye(n_samples)
+
+#     H = identity - (1.0 / n_samples) * np.ones((n_samples, n_samples))
+
+#     kernel_mat = np.einsum("ij,jk,kl->il", H, kernel_mat, H)
+
+#     return kernel_mat

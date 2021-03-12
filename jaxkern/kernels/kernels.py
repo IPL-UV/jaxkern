@@ -3,18 +3,17 @@ from typing import Callable, Dict, Optional
 
 import jax
 import jax.numpy as np
-import objax
-
+from chex import Array, dataclass
 from jaxkern.dist import sqeuclidean_distance
 
 
 # @functools.partial(jax.jit, static_argnums=(0))
 def gram(
     func: Callable,
-    params: Dict,
-    x: np.ndarray,
-    y: np.ndarray,
-) -> np.ndarray:
+    params: dataclass,
+    x: Array,
+    y: Array,
+) -> Array:
     """Computes the gram matrix.
 
     Given a function `Callable` and some `params`, we can
@@ -34,7 +33,7 @@ def gram(
 
     Returns
     -------
-    mat : np.ndarray
+    mat : Array
         the gram matrix.
 
     Examples
@@ -47,10 +46,10 @@ def gram(
 
 def covariance_matrix(
     func: Callable,
-    params: Dict[str, float],
-    x: np.ndarray,
-    y: np.ndarray,
-) -> np.ndarray:
+    params: dataclass,
+    x: Array,
+    y: Array,
+) -> Array:
     """Computes the covariance matrix.
 
     Given a function `Callable` and some `params`, we can
@@ -93,7 +92,7 @@ def covariance_matrix(
     return mapx2(x, y)
 
 
-def linear_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.ndarray:
+def linear_kernel(params: Dict[str, float], x: Array, y: Array) -> Array:
     """Linear kernel
 
     .. math:: k_i = \sum_i^N x_i-y_i
@@ -116,7 +115,12 @@ def linear_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.
     return np.sum(x * y)
 
 
-def rbf_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.ndarray:
+@dataclass
+class RBFParams:
+    gamma: Array
+
+
+def rbf_kernel(params: RBFParams, x: Array, y: Array) -> Array:
     """Radial Basis Function (RBF) Kernel.
 
     The most popular kernel in all of kernel methods.
@@ -147,11 +151,17 @@ def rbf_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.nda
     ----------
     .. [1] David Duvenaud, *Kernel Cookbook*
     """
-    return np.exp(-params["gamma"] * sqeuclidean_distance(x, y))
+    return np.exp(params.gamma * sqeuclidean_distance(x, y))
+
+
+@dataclass
+class ARDParams:
+    length_scale: Array
+    variance: Array
 
 
 # ARD Kernel
-def ard_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.ndarray:
+def ard_kernel(params: ARDParams, x: Array, y: Array) -> Array:
     """Automatic Relevance Determination (ARD) Kernel.
 
     This is an RBF kernel with a variable length scale. It
@@ -186,15 +196,22 @@ def ard_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.nda
     .. [1] David Duvenaud, *Kernel Cookbook*
     """
     # divide by the length scale
-    x = x / params["length_scale"]
-    y = y / params["length_scale"]
+    x = x / params.length_scale
+    y = y / params.length_scale
 
     # return the ard kernel
-    return params["var_f"] * np.exp(-sqeuclidean_distance(x, y))
+    return params.variance * np.exp(-sqeuclidean_distance(x, y))
+
+
+@dataclass
+class RQParams:
+    length_scale: Array
+    variance: Array
+    scale_mixture: Array
 
 
 # Rational Quadratic Kernel
-def rq_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.ndarray:
+def rq_kernel(params: RQParams, x: Array, y: Array) -> Array:
     """Rational Quadratic Function (RQF) Kernel.
 
     A generalization of the RBF kernel function. It is 
@@ -233,10 +250,10 @@ def rq_kernel(params: Dict[str, float], x: np.ndarray, y: np.ndarray) -> np.ndar
     .. [1] David Duvenaud, *Kernel Cookbook*
     """
     # divide by the length scale
-    x = x / params["length_scale"]
-    y = y / params["length_scale"]
+    x = x / params.length_scale
+    y = y / params.length_scale
 
     # return the ard kernel
-    return params["var_f"] * np.exp(1 + sqeuclidean_distance(x, y)) ** (
-        -params["scale_mixture"]
+    return params.variance * np.exp(1 + sqeuclidean_distance(x, y)) ** (
+        -params.scale_mixture
     )

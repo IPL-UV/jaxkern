@@ -1,95 +1,56 @@
 from typing import Tuple
 
+import jax
 import jax.numpy as np
 import objax
-from objax.typing import JaxArray
 
+from chex import Array, dataclass
 from jaxkern.kernels.base import Kernel
 
+# from tensorflow_probability.substrates.jax import distributions as tfd
 
-class RBFSampler(objax.Module):
-    """Random Fourier Features (RFF) for RBF Kernel
 
-    Parameters
-    ----------
-    n_rff : int
-        number of random fourier features to approximate the
-        kernel matrix, (default=100)
-    length_scale : int
-        the length scale for the RBF kernel, this is a trainable
-        parameter (default=2.0)
-    center : bool
-        option to center the projection matrix sample-wise, (default=True)
-    seed : int
-        the random state for generating the features, (default=123)
-    """
+@dataclass
+class SpectralRBFParams:
+    length_scale: Array
+    n_ff: int
 
-    def __init__(
-        self,
-        n_rff: int = 100,
-        length_scale: float = 2.0,
-        center: bool = False,
-        seed: int = 123,
-    ) -> None:
-        self.n_rff = n_rff
-        self.length_scale = objax.TrainVar(np.array([length_scale]))
-        self.center = center
-        self.rng = objax.random.Generator(seed)
 
-    def __call__(self, X: np.ndarray) -> np.ndarray:
-        """Calculates projection matrix
+def spectral_rbf_projection(
+    key, params: SpectralRBFParams, X: Array, n_rff: int
+) -> Array:
 
-        Parameters
-        ----------
-        X : JaxArray
-            the stack of features to calculate the projection
-            (n_samples, n_features)
+    # generate rff weights
+    W, b = generate_rff_weights(key, X.shape[1], n_rff, params.length_scale)
 
-        Returns
-        -------
-        Z : JaxArray
-            the projection matrix, (n_samples, n_rff)
-        """
+    # calculate projection matrix
+    Z = np.cos(np.dot(X, W) + b[None, :])
 
-        # sample weights
-        W, b = generate_rff_weights(
-            X.shape[1], self.n_rff, self.length_scale.value, self.rng
-        )
+    # normalize projection matrix
+    Z *= np.sqrt(2.0) / np.sqrt(n_rff)
 
-        # calculate projection matrix
-        Z = np.cos(np.dot(X, W) + b[None, :])
+    # center samples-wise
+    Z = Z - np.mean(Z, axis=0)
 
-        # normalize projection matrix
-        Z *= np.sqrt(2.0) / np.sqrt(self.n_rff)
+    # return projection matrix
+    return Z
 
-        # center samples-wise
-        if self.center == True:
-            Z = Z - np.mean(Z, axis=0)
 
-        # return projection matrix
-        return Z
+def spectral_rbf_kernel(key, params, X, n_rff):
 
-    def calculate_kernel(self, X: JaxArray) -> JaxArray:
-        """Calculates approximate RBF kernel matrix.
+    # calculate projection matrix
+    Z = spectral_rbf_projection(key, params, X, n_rff)
 
-        Parameters
-        ----------
-        X : JaxArray
-            the data to be used to calculate the kernel matrix, (n_samples, n_features)
-
-        Returns
-        -------
-        kernel_mat : JaxArray
-            the approximate kernel matrix, (n_samples, n_samples)
-        """
-        Z = self.__call__(X)
-
-        return np.dot(Z, Z.T)
+    # calculate kernel matrix
+    return np.dot(Z, Z.T)
 
 
 def generate_rff_weights(
-    n_features: int, n_rff: int, length_scale: float = 1.0, seed: int = 123
-) -> Tuple[JaxArray, JaxArray]:
+    key,
+    n_features: int,
+    n_rff: int,
+    length_scale: float = 1.0,
+) -> Tuple[Array, Array]:
     """Generate weights and bias
     Given a number of features and fourier features, it will
     generate a bias and
@@ -105,18 +66,19 @@ def generate_rff_weights(
 
     Returns
     -------
-    W : JaxArray
+    W : Array
         the weights for the kernel matrix, (n_features, n_rff)
-    b : JaxArray
+    b : Array
         the bias for the kernel matrix, (n_rff,)
     """
 
     # weights
-    W = objax.random.normal(
-        mean=0, stddev=1.0, shape=(n_features, n_rff), generator=seed
-    ) * (1.0 / length_scale)
+    W = jax.random.normal(key=key, shape=(n_features, n_rff))
+
+    W *= 1.0 / length_scale
 
     # bias
-    b = 2 * np.pi * objax.random.uniform(shape=(n_rff,), generator=seed)
+    b = jax.random.uniform(key=key, shape=(n_rff,))
+    b *= 2 * np.pi
 
     return W, b
