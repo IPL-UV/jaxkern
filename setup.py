@@ -21,11 +21,7 @@ REQUIRES_PYTHON = ">=3.7.0"
 VERSION = "0.0.1"
 
 # What packages are required for this module to be executed?
-REQUIRED = [
-    "jax",
-    "jaxlib",
-    "numpy",
-]
+REQUIRED = ["jax", "jaxlib", "numpy", "gpjax", "chex", "optax", "multipledispatch"]
 
 # What packages are optional?
 EXTRAS = {
