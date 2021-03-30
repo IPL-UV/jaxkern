@@ -2,7 +2,50 @@ import chex
 import jax
 import jax.numpy as jnp
 from typing import Callable, Optional, Tuple
-from jaxkern.gp.uncertain.sigma import sigma_point_transform
+from jaxkern.gp.uncertain.sigma import sigma_point_transform, SigmaPointTransform
+from chex import Array, dataclass
+
+
+@dataclass
+class UnscentedTransform(SigmaPointTransform):
+    n_features: int
+    alpha: float = 1.0
+    beta: float = 2.0
+    kappa: Optional[float] = None
+
+    def __post_init__(
+        self,
+    ) -> None:
+        wm, wc = get_unscented_weights(
+            self.n_features, self.kappa, self.alpha, self.beta
+        )
+        self.wm, self.wc = wm, jnp.diag(wc)
+
+        # generate sigma points
+        self.sigma_pts = get_unscented_sigma_points(
+            self.n_features, self.kappa, self.alpha
+        )
+
+
+@dataclass
+class SphericalRadialTransform(SigmaPointTransform):
+    n_features: int
+
+    def __post_init__(
+        self,
+    ) -> None:
+        self.alpha = 1.0
+        self.beta = 0.0
+        self.kappa = 0.0
+        wm, wc = get_unscented_weights(
+            self.n_features, self.kappa, self.alpha, self.beta
+        )
+        self.wm, self.wc = wm, jnp.diag(wc)
+
+        # generate sigma points
+        self.sigma_pts = get_unscented_sigma_points(
+            self.n_features, self.kappa, self.alpha
+        )
 
 
 def init_unscented_transform(

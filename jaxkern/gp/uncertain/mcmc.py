@@ -19,7 +19,7 @@ class MCMomentTransform:
     n_samples: int
     seed: int
 
-    def __init__(
+    def __post_init__(
         self,
     ):
         self.rng_key = jr.PRNGKey(self.seed)
@@ -28,6 +28,42 @@ class MCMomentTransform:
         )
         wm, wc = get_mc_weights(self.n_samples)
         self.wm, self.wc = wm, wc
+
+    def predict_f(self, f, x, x_cov, rng_key):
+
+        # sigma points
+        sigma_pts = self.z.sample((self.n_samples,), rng_key)
+
+        # cholesky for input covariance
+        L = jnp.linalg.cholesky(x_cov)
+
+        # calculate sigma points
+        # (D,M) = (D,1) + (D,D)@(D,M)
+        x_mc_samples = x[:, None] + L @ sigma_pts.T
+        # ===================
+        # Mean
+        # ===================
+
+        # function predictions over mc samples
+        # (P,M) = (D,M)
+        y_mu_mc = jax.vmap(f, in_axes=1, out_axes=1)(x_mc_samples)
+
+        # mean of mc samples
+        # (P,) = (P,M)
+        y_mu = jnp.mean(y_mu_mc, axis=1)
+
+        # ===================
+        # Covariance
+        # ===================
+        # (P,M) = (P,M) - (P, 1)
+        dfydx = y_mu_mc - y_mu[:, None]
+
+        # (P,D) = () * (P,M) @ (M,P)
+        y_var = jnp.diag(self.wc * dfydx @ dfydx.T)
+
+        y_var = jnp.atleast_1d(y_var)
+
+        return y_mu, y_var
 
     def mean(self, f, x, x_cov):
 
@@ -49,11 +85,46 @@ class MCMomentTransform:
 
         return y_mu
 
-    def variance(self, f, x, x_cov):
-        raise NotImplementedError()
-
     def covariance(self, f, x, x_cov):
-        raise NotImplementedError()
+
+        # sigma points
+        sigma_pts = self.z.sample((self.n_samples,), self.rng_key)
+
+        # cholesky for input covariance
+        L = jnp.linalg.cholesky(x_cov)
+
+        # calculate sigma points
+        # (D,M) = (D,1) + (D,D)@(D,M)
+        x_mc_samples = x[:, None] + L @ sigma_pts.T
+
+        # function predictions over mc samples
+        # (P,M) = (D,M)
+        y_mu_mc = jax.vmap(f, in_axes=1, out_axes=1)(x_mc_samples)
+
+        # mean of mc samples
+        # (P,) = (P,M)
+        y_mu = jnp.mean(y_mu_mc, axis=1)
+
+        # ===================
+        # Covariance
+        # ===================
+        # (P,M) = (P,M) - (P, 1)
+        dfydx = y_mu_mc - y_mu[:, None]
+
+        # (P,D) = () * (P,M) @ (M,P)
+        y_cov = self.wc * dfydx @ dfydx.T
+
+        return y_cov
+
+    def variance(self, f, x, x_cov):
+
+        y_cov = self.covariance(f, x, x_cov)
+
+        y_var = jnp.diag(y_cov)
+
+        y_var = jnp.atleast_1d(y_var)
+
+        return y_var
 
 
 def init_mc_moment_transform(

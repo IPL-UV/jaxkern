@@ -1,8 +1,3 @@
-from jaxkern.viz import plot_1D_GP
-from jaxkern.gp.uncertain.mcmc import init_mc_moment_transform
-from jaxkern.gp.uncertain.unscented import init_unscented_transform
-from jaxkern.gp.uncertain.linear import init_taylor_transform, init_taylor_o2_transform
-
 import sys, os
 from pyprojroot import here
 from wandb.sdk import wandb_config
@@ -12,6 +7,11 @@ root = here(project_files=[".here"])
 cwd = os.getcwd()
 # append to path
 sys.path.append(str(root))
+
+from jaxkern.viz import plot_1D_GP
+from jaxkern.gp.uncertain.mcmc import init_mc_moment_transform
+from jaxkern.gp.uncertain.unscented import init_unscented_transform
+from jaxkern.gp.uncertain.linear import init_taylor_transform, init_taylor_o2_transform
 
 # jax packages
 import itertools

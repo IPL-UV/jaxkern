@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Dict
 
 import jax
 import jax.numpy as jnp
@@ -7,7 +7,7 @@ from chex import Array
 from multipledispatch import dispatch
 
 
-def e_mx(mean: Callable) -> Callable:
+def e_Mx(mean: Callable, mm_transform: Callable) -> Callable:
     """kernel expectation, eMx
 
     Parameters
@@ -21,10 +21,26 @@ def e_mx(mean: Callable) -> Callable:
         Input: (n_features), (n_features, n_features)
         Output: (p_features)
     """
-    return NotImplementedError()
+
+    def body(x):
+        # calculate kernel
+        y_mu = mean(x).squeeze()
+
+        # ensure size
+        y_mu = jnp.atleast_1d(y_mu)
+
+        return y_mu
+
+    def f(x, x_cov):
+
+        x_mu = mm_transform.mean(body, x, x_cov)
+
+        return x_mu
+
+    return f
 
 
-def e_kx(kernel: Callable) -> Callable:
+def e_Kx(kernel: Callable, params: Dict, mm_transform: Callable) -> Callable:
     """kernel expectation, eKdiag
 
     Parameters
@@ -43,14 +59,25 @@ def e_kx(kernel: Callable) -> Callable:
         Output: ()
     """
 
-    def f(X):
+    def body(x):
+        # calculate kernel
+        kx = kernel(x, x, params)
 
-        return kernel(X, X)
+        # ensure size
+        kx = jnp.atleast_1d(kx)
+
+        return kx
+
+    def f(x, x_cov):
+
+        x_mu = mm_transform.mean(body, x, x_cov)
+
+        return x_mu
 
     return f
 
 
-def e_kxy(kernel: Callable, Y: Array) -> Callable:
+def e_Kxy(kernel: Callable, params: Dict, mm_transform: Callable) -> Callable:
     """kernel expectation, eKxy
 
     Parameters
@@ -67,17 +94,37 @@ def e_kxy(kernel: Callable, Y: Array) -> Callable:
         Output: (m_features)
     """
 
-    def f(X):
-        return jax.vmap(kernel, in_axes=(0, None))(X, Y).squeeze()
+    def body(y, x):
+        # calculate kernel
+        kxy = kernel(x, y, params)
+
+        # ensure size
+        kxy = jnp.atleast_1d(kxy)
+
+        return kxy
+
+    def f(x, x_cov, y):
+
+        f = jax.partial(body, y)
+
+        x_mu = mm_transform.mean(f, x, x_cov)
+
+        return jnp.atleast_1d(x_mu)
 
     return f
 
 
-def e_x_kxy(meanf: Callable, kernel: Callable, Y: Array) -> Callable:
-    raise NotImplementedError()
+# def e_x_kxy(meanf: Callable, kernel: Callable, Y: Array) -> Callable:
+#     raise NotImplementedError()
 
 
-def e_kxy_kxz(kernel1: Callable, Y: Array, kernel: Callable, Z: Array) -> Callable:
+def e_Kxy_Kxz(
+    kernel1: Callable,
+    params1: Dict,
+    kernel2: Callable,
+    params2: Dict,
+    mm_transform: Callable,
+) -> Callable:
     """kernel expectation, eKxy
 
     Parameters
@@ -97,7 +144,29 @@ def e_kxy_kxz(kernel1: Callable, Y: Array, kernel: Callable, Z: Array) -> Callab
         Input: (n_features), (n_features, n_features)
         Output: (m_features, l_features)
     """
-    raise NotImplementedError()
+
+    def body(y, z, x):
+        # calculate kernel
+        kxy = kernel1(x, y, params1)
+
+        kxz = kernel2(x, z, params2)
+
+        kxykxz = kxy * kxz
+
+        # ensure size
+        kxykxz = jnp.atleast_1d(kxykxz)
+
+        return kxykxz
+
+    def f(x, x_cov, y, z):
+
+        f = jax.partial(body, y, z)
+
+        x_mu = mm_transform.mean(f, x, x_cov)
+
+        return jnp.atleast_1d(x_mu)
+
+    return f
 
 
 # class MeanExpectation(objax.Module):
