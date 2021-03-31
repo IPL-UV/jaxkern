@@ -11,32 +11,6 @@ from jax.scipy.linalg import cho_factor, cho_solve
 from gpjax.types import Dataset
 
 
-def moment_matching_mean(
-    gp: ConjugatePosterior, param: dict, training: Dataset, mm_transform: dataclass
-) -> Callable:
-    X, y = training.X, training.y
-    sigma = param["obs_noise"]
-    n_train = training.n
-    # Precompute covariance matrices
-    Kff = gram(gp.prior.kernel, X, param)
-    prior_mean = gp.prior.mean_function(X)
-    L = cho_factor(Kff + I(n_train) * sigma, lower=True)
-
-    prior_distance = y - prior_mean
-    weights = cho_solve(L, prior_distance)
-
-    f = e_Kxy(gp.prior.kernel, param, mm_transform=mm_transform)
-
-    mv = jax.vmap(f, in_axes=(0, None, None), out_axes=(0))
-    psi1 = jax.vmap(mv, in_axes=(None, None, 0), out_axes=(1))
-
-    def meanf(test_inputs: Array, test_cov: Array) -> Array:
-        Kfx = psi1(test_inputs, test_cov, X)[..., 0]
-        return jnp.dot(Kfx, weights)
-
-    return meanf
-
-
 def conditional(
     kernel: Callable,
     Xtrain: JaxArray,

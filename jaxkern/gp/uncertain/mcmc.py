@@ -1,3 +1,4 @@
+from jaxkern.gp.uncertain.moment import MomentTransform
 from typing import Callable, Tuple
 
 import jax
@@ -14,7 +15,7 @@ from jaxkern.gp.predictive import predictive_mean
 
 
 @dataclass
-class MCMomentTransform:
+class MCMomentTransform(MomentTransform):
     n_features: int
     n_samples: int
     seed: int

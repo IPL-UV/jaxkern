@@ -1,3 +1,4 @@
+from jaxkern.gp.uncertain.moment import MomentTransform
 from typing import Callable, Tuple
 import jax
 import jax.numpy as jnp
@@ -6,7 +7,7 @@ import jax.random as jr
 
 
 @dataclass
-class SigmaPointTransform:
+class SigmaPointTransform(MomentTransform):
     def predict_f(self, f: Callable, x: Array, x_cov: Array) -> Tuple[Array, Array]:
 
         # cholesky decomposition

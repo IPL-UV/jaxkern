@@ -3,8 +3,10 @@ from typing import Callable, Dict
 import jax
 import jax.numpy as jnp
 import objax
-from chex import Array
+from chex import Array, dataclass
 from multipledispatch import dispatch
+from jaxkern.gp.uncertain.moment import MomentTransform
+from gpjax.kernels import Kernel
 
 
 def e_Mx(mean: Callable, mm_transform: Callable) -> Callable:
@@ -165,6 +167,39 @@ def e_Kxy_Kxz(
         x_mu = mm_transform.mean(f, x, x_cov)
 
         return jnp.atleast_1d(x_mu)
+
+    return f
+
+
+Psi0 = e_Kx
+
+
+def Psi1(kernel: Kernel, param: dict, mm_transform: MomentTransform, Y: Array):
+    """Psi1 - E_x[k(x,y)]"""
+    term2 = e_Kxy(kernel, param, mm_transform)
+
+    # vectorized
+    # X=(D), Y=(M,D) -> (M)
+    psi1 = jax.vmap(term2, in_axes=(None, None, 0), out_axes=(0))
+
+    def f(X, X_cov):
+        return psi1(X, X_cov, Y)
+
+    return f
+
+
+def Psi2(
+    kernel: Kernel, param: dict, mm_transform: MomentTransform, Y: Array, Z: Array
+):
+    """Psi2 - E_x[k(x,y)k(x,z)]"""
+    term3 = e_Kxy_Kxz(kernel, param, kernel, param, mm_transform=mm_transform)
+    # vectorized
+    # X=(N,D), Y=(M,D), Z=(K,D) -> (N,M,K)
+    mvv = jax.vmap(term3, in_axes=(None, None, 0, None), out_axes=(0))
+    psi2 = jax.vmap(mvv, in_axes=(None, None, None, 0), out_axes=(1))
+
+    def f(X, X_cov):
+        return psi2(X, X_cov, Y, Z)[..., 0]
 
     return f
 

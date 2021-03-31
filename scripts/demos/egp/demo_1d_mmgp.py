@@ -12,6 +12,11 @@ from jaxkern.viz import plot_1D_GP
 from jaxkern.gp.uncertain.mcmc import MCMomentTransform, init_mc_moment_transform
 from jaxkern.gp.uncertain.unscented import UnscentedTransform, init_unscented_transform
 from jaxkern.gp.uncertain.linear import init_taylor_transform, init_taylor_o2_transform
+from jaxkern.gp.uncertain.mcmc import MCMomentTransform
+from jaxkern.gp.uncertain.unscented import UnscentedTransform, SphericalRadialTransform
+from jaxkern.gp.uncertain.quadrature import GaussHermite
+from jaxkern.gp.uncertain.predict import moment_matching_predict_f
+
 
 # jax packages
 import itertools
@@ -25,7 +30,7 @@ from jax import random
 import numpy as np
 
 # import chex
-config.update("jax_enable_x64", False)
+config.update("jax_enable_x64", True)
 
 
 # logging
@@ -110,6 +115,7 @@ parser.add_argument("--kappa", type=float, default=None, help="Number of batches
 # ======================
 # Logger Parameters
 # ======================
+parser.add_argument("--name", type=str, default="gp_mm")
 parser.add_argument("--wandb-entity", type=str, default="ipl_uv")
 parser.add_argument("--wandb-project", type=str, default="jaxkern-demos")
 # =====================
@@ -282,7 +288,7 @@ wandb.log({"preds_standard_clean": wandb.Image(plt)})
 # PREDICTIONS (NOISY)
 # ==============================
 
-input_cov = jnp.array([x_noise]).reshape(-1, 1) ** 2
+input_cov = jnp.array([0.1]).reshape(-1, 1)  # ** 2
 
 
 Xtest = jnp.linspace(-10.1, 10.1, ntest)[:, None]
@@ -332,77 +338,93 @@ wandb.log({"preds_standard_noisy": wandb.Image(plt)})
 
 
 # ==============================
-# MC - PREDICTIONS (NOISY)
+# MM - MC - PREDICTIONS (NOISY)
 # ==============================
 
+mm_transform = MCMomentTransform(n_features=1, n_samples=1_000, seed=123)
+# mm_transform = UnscentedTransform(n_features=1, alpha=1.0, beta=2.0, kappa=None)
+# mm_transform = GaussHermite(n_features=1, degree=20)
+# mm_transform = SphericalRadialTransform(n_features=1)
 
 # init function
 n_features = 1
 mc_samples = config.mc_samples
 covariance = False
-mf = lambda x: jnp.atleast_1d(meanf(x).squeeze())
+input_cov = jnp.array([0.1]).reshape(-1, 1)
 
-mc_transform = MCMomentTransform(
+mm_transform = MCMomentTransform(
     n_features=n_features, n_samples=mc_samples, seed=config.seed
 )
 
-key, mc_rng = jax.random.split(key, 2)
-mu, var = jax.vmap(
-    mc_transform.predict_f, in_axes=(None, 0, None, None), out_axes=(0, 0)
-)(mf, Xtest_noisy, input_cov, mc_rng)
+mm_predict_f = moment_matching_predict_f(
+    posterior, params, training_ds, mm_transform, obs_noise=True
+)
 
-fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var)
+mm_mean_f = jax.vmap(mm_predict_f, in_axes=(0, None))
+
+mu, var_ = mm_mean_f(Xtest_noisy, input_cov)
+
+# mc_transform = MCMomentTransform(
+#     n_features=n_features, n_samples=mc_samples, seed=config.seed
+# )
+
+# key, mc_rng = jax.random.split(key, 2)
+# mu, var = jax.vmap(
+#     mc_transform.predict_f, in_axes=(None, 0, None, None), out_axes=(0, 0)
+# )(mf, Xtest_noisy, input_cov, mc_rng)
+
+fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var.squeeze())
 wandb.log({"preds_mc_noisy": wandb.Image(plt)})
 
 
-# ==============================
-# Unscented - PREDICTIONS (NOISY)
-# ==============================
+# # ==============================
+# # Unscented - PREDICTIONS (NOISY)
+# # ==============================
 
 
-# init function
-alpha = config.alpha
-beta = config.beta
-kappa = config.kappa
+# # init function
+# alpha = config.alpha
+# beta = config.beta
+# kappa = config.kappa
 
-unscented_transform = UnscentedTransform(
-    n_features=n_features, alpha=alpha, beta=beta, kappa=kappa
-)
+# unscented_transform = UnscentedTransform(
+#     n_features=n_features, alpha=alpha, beta=beta, kappa=kappa
+# )
 
-key, mc_rng = jax.random.split(key, 2)
-mu, var = jax.vmap(
-    unscented_transform.predict_f, in_axes=(None, 0, None), out_axes=(0, 0)
-)(mf, Xtest_noisy, input_cov)
-
-
-fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var)
-wandb.log({"preds_unscented_noisy": wandb.Image(plt)})
-
-# =================================
-# Taylor (o1) - PREDICTIONS (NOISY)
-# =================================
-
-# init function
-taylor_o1_transform = init_taylor_transform(meanf=f, varf=varf)
-
-mu, var = jax.vmap(taylor_o1_transform, in_axes=(0, None), out_axes=(0, 0))(
-    Xtest_noisy, input_cov
-)
-
-fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var)
-wandb.log({"preds_taylor_o1_noisy": wandb.Image(plt)})
-
-# =================================
-# Taylor (o2) - PREDICTIONS (NOISY)
-# =================================
+# key, mc_rng = jax.random.split(key, 2)
+# mu, var = jax.vmap(
+#     unscented_transform.predict_f, in_axes=(None, 0, None), out_axes=(0, 0)
+# )(mf, Xtest_noisy, input_cov)
 
 
-# init function
-taylor_o2_transform = init_taylor_o2_transform(meanf=f, varf=varf)
+# fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var)
+# wandb.log({"preds_unscented_noisy": wandb.Image(plt)})
 
-mu, var = jax.vmap(taylor_o2_transform, in_axes=(0, None), out_axes=(0, 0))(
-    Xtest_noisy, input_cov
-)
+# # =================================
+# # Taylor (o1) - PREDICTIONS (NOISY)
+# # =================================
 
-fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var)
-wandb.log({"preds_taylor_o2_noisy": wandb.Image(plt)})
+# # init function
+# taylor_o1_transform = init_taylor_transform(meanf=f, varf=varf)
+
+# mu, var = jax.vmap(taylor_o1_transform, in_axes=(0, None), out_axes=(0, 0))(
+#     Xtest_noisy, input_cov
+# )
+
+# fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var)
+# wandb.log({"preds_taylor_o1_noisy": wandb.Image(plt)})
+
+# # =================================
+# # Taylor (o2) - PREDICTIONS (NOISY)
+# # =================================
+
+
+# # init function
+# taylor_o2_transform = init_taylor_o2_transform(meanf=f, varf=varf)
+
+# mu, var = jax.vmap(taylor_o2_transform, in_axes=(0, None), out_axes=(0, 0))(
+#     Xtest_noisy, input_cov
+# )
+
+# fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var)
+# wandb.log({"preds_taylor_o2_noisy": wandb.Image(plt)})
