@@ -111,6 +111,10 @@ parser.add_argument("--mc_samples", type=int, default=1_000, help="Number of bat
 parser.add_argument("--alpha", type=float, default=1.0, help="Number of batches")
 parser.add_argument("--beta", type=float, default=2.0, help="Number of batches")
 parser.add_argument("--kappa", type=float, default=None, help="Number of batches")
+# ======================
+# Quadrature
+# ======================
+parser.add_argument("--degree", type=int, default=20, help="Number of batches")
 
 # ======================
 # Logger Parameters
@@ -288,7 +292,7 @@ wandb.log({"preds_standard_clean": wandb.Image(plt)})
 # PREDICTIONS (NOISY)
 # ==============================
 
-input_cov = jnp.array([0.1]).reshape(-1, 1)  # ** 2
+input_cov = jnp.array([x_noise]).reshape(-1, 1)  # ** 2
 
 
 Xtest = jnp.linspace(-10.1, 10.1, ntest)[:, None]
@@ -350,81 +354,85 @@ mm_transform = MCMomentTransform(n_features=1, n_samples=1_000, seed=123)
 n_features = 1
 mc_samples = config.mc_samples
 covariance = False
-input_cov = jnp.array([0.1]).reshape(-1, 1)
 
 mm_transform = MCMomentTransform(
     n_features=n_features, n_samples=mc_samples, seed=config.seed
 )
 
 mm_predict_f = moment_matching_predict_f(
-    posterior, params, training_ds, mm_transform, obs_noise=True
+    posterior, learned_params, training_ds, mm_transform, obs_noise=True
 )
 
 mm_mean_f = jax.vmap(mm_predict_f, in_axes=(0, None))
 
-mu, var_ = mm_mean_f(Xtest_noisy, input_cov)
-
-# mc_transform = MCMomentTransform(
-#     n_features=n_features, n_samples=mc_samples, seed=config.seed
-# )
-
-# key, mc_rng = jax.random.split(key, 2)
-# mu, var = jax.vmap(
-#     mc_transform.predict_f, in_axes=(None, 0, None, None), out_axes=(0, 0)
-# )(mf, Xtest_noisy, input_cov, mc_rng)
+mu, var = mm_mean_f(Xtest_noisy, input_cov)
 
 fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var.squeeze())
 wandb.log({"preds_mc_noisy": wandb.Image(plt)})
 
 
-# # ==============================
-# # Unscented - PREDICTIONS (NOISY)
-# # ==============================
+# ==============================
+# Unscented - PREDICTIONS (NOISY)
+# ==============================
+
+# init function
+alpha = config.alpha
+beta = config.beta
+kappa = config.kappa
+
+mm_transform = UnscentedTransform(n_features=1, alpha=alpha, beta=beta, kappa=kappa)
+# mm_transform = GaussHermite(n_features=1, degree=20)
+# mm_transform = SphericalRadialTransform(n_features=1)
 
 
-# # init function
-# alpha = config.alpha
-# beta = config.beta
-# kappa = config.kappa
+mm_predict_f = moment_matching_predict_f(
+    posterior, learned_params, training_ds, mm_transform, obs_noise=True
+)
 
-# unscented_transform = UnscentedTransform(
-#     n_features=n_features, alpha=alpha, beta=beta, kappa=kappa
-# )
+mm_mean_f = jax.vmap(mm_predict_f, in_axes=(0, None))
 
-# key, mc_rng = jax.random.split(key, 2)
-# mu, var = jax.vmap(
-#     unscented_transform.predict_f, in_axes=(None, 0, None), out_axes=(0, 0)
-# )(mf, Xtest_noisy, input_cov)
+mu, var = mm_mean_f(Xtest_noisy, input_cov)
+
+fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var.squeeze())
+wandb.log({"preds_unscented_noisy": wandb.Image(plt)})
 
 
-# fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var)
-# wandb.log({"preds_unscented_noisy": wandb.Image(plt)})
+# ==============================
+# GaussHermite - PREDICTIONS (NOISY)
+# ==============================
 
-# # =================================
-# # Taylor (o1) - PREDICTIONS (NOISY)
-# # =================================
+# init function
+degree = config.degree
 
-# # init function
-# taylor_o1_transform = init_taylor_transform(meanf=f, varf=varf)
-
-# mu, var = jax.vmap(taylor_o1_transform, in_axes=(0, None), out_axes=(0, 0))(
-#     Xtest_noisy, input_cov
-# )
-
-# fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var)
-# wandb.log({"preds_taylor_o1_noisy": wandb.Image(plt)})
-
-# # =================================
-# # Taylor (o2) - PREDICTIONS (NOISY)
-# # =================================
+mm_transform = GaussHermite(n_features=1, degree=degree)
+# mm_transform = SphericalRadialTransform(n_features=1)
 
 
-# # init function
-# taylor_o2_transform = init_taylor_o2_transform(meanf=f, varf=varf)
+mm_predict_f = moment_matching_predict_f(
+    posterior, learned_params, training_ds, mm_transform, obs_noise=True
+)
 
-# mu, var = jax.vmap(taylor_o2_transform, in_axes=(0, None), out_axes=(0, 0))(
-#     Xtest_noisy, input_cov
-# )
+mm_mean_f = jax.vmap(mm_predict_f, in_axes=(0, None))
 
-# fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var)
-# wandb.log({"preds_taylor_o2_noisy": wandb.Image(plt)})
+mu, var = mm_mean_f(Xtest_noisy, input_cov)
+
+fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var.squeeze())
+wandb.log({"preds_gh_noisy": wandb.Image(plt)})
+
+# ==============================
+# Unscented Spherical - PREDICTIONS (NOISY)
+# ==============================
+
+mm_transform = SphericalRadialTransform(n_features=1)
+
+
+mm_predict_f = moment_matching_predict_f(
+    posterior, learned_params, training_ds, mm_transform, obs_noise=True
+)
+
+mm_mean_f = jax.vmap(mm_predict_f, in_axes=(0, None))
+
+mu, var = mm_mean_f(Xtest_noisy, input_cov)
+
+fig, ax = plot_1D_gp_noisy(ytest=mu, y_mu=mu, y_var=var.squeeze())
+wandb.log({"preds_sphere_noisy": wandb.Image(plt)})
