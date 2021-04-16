@@ -383,7 +383,7 @@ wandb.log({"preds_unscented_noisy": wandb.Image(plt)})
 # =================================
 
 # init function
-taylor_o1_transform = init_taylor_transform(meanf=f, varf=varf)
+taylor_o1_transform = init_taylor_transform(meanf=mf, varf=varf)
 
 mu, var = jax.vmap(taylor_o1_transform, in_axes=(0, None), out_axes=(0, 0))(
     Xtest_noisy, input_cov
@@ -398,7 +398,7 @@ wandb.log({"preds_taylor_o1_noisy": wandb.Image(plt)})
 
 
 # init function
-taylor_o2_transform = init_taylor_o2_transform(meanf=f, varf=varf)
+taylor_o2_transform = init_taylor_o2_transform(meanf=mf, varf=varf)
 
 mu, var = jax.vmap(taylor_o2_transform, in_axes=(0, None), out_axes=(0, 0))(
     Xtest_noisy, input_cov

@@ -48,10 +48,13 @@ class MCMomentTransform(MomentTransform):
         # function predictions over mc samples
         # (P,M) = (D,M)
         y_mu_mc = jax.vmap(f, in_axes=1, out_axes=1)(x_mc_samples)
+        # print(x_mc_samples.shape, y_mu_mc.shape)
 
         # mean of mc samples
         # (P,) = (P,M)
+
         y_mu = jnp.mean(y_mu_mc, axis=1)
+        # print(y_mu.shape, y_mu_mc.shape)
 
         # ===================
         # Covariance
@@ -73,16 +76,17 @@ class MCMomentTransform(MomentTransform):
 
         # cholesky for input covariance
         L = jnp.linalg.cholesky(x_cov)
-
         x_mc_samples = x[:, None] + L @ sigma_pts.T
 
         # function predictions over mc samples
         # (P,M) = (D,M)
         y_mu_mc = jax.vmap(f, in_axes=1, out_axes=1)(x_mc_samples)
+        # print(y_mu_mc.shape, x_mc_samples.shape)
 
         # mean of mc samples
         # (P,) = (P,M)
         y_mu = jnp.mean(y_mu_mc, axis=1)
+        # print(y_mu.shape, y_mu_mc.shape)
 
         return y_mu
 
