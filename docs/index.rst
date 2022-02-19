@@ -39,7 +39,7 @@ Installation
 
       .. code-block:: bash
 
-         pip install "git+https://gihub.com/ipl-uv/jaxkern.git"
+         pip install "git+https://github.com/ipl-uv/jaxkern.git"
 
    .. group-tab:: git
 
@@ -50,7 +50,7 @@ Installation
 
          .. code-block:: bash
 
-            git clone https://gihub.com/ipl-uv/jaxkern.git
+            git clone https://github.com/ipl-uv/jaxkern.git
 
       3. Create a new environment from the `.yml` file and activate.
 
