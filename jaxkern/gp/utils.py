@@ -2,10 +2,11 @@ from functools import partial
 from typing import Callable, Dict, Tuple
 
 import jax
-import jax.numpy as jnp
+import jax.numpy as np
+from objax.typing import JaxArray
 
 
-def cholesky_factorization(K: jnp.ndarray, Y: jnp.ndarray) -> Tuple[jnp.ndarray, bool]:
+def cholesky_factorization(K: np.ndarray, Y: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Cholesky Factorization"""
     # cho factor the cholesky
     L = jax.scipy.linalg.cho_factor(K, lower=True)
@@ -21,29 +22,28 @@ def saturate(params):
     return {ikey: jax.nn.softplus(ivalue) for (ikey, ivalue) in params.items()}
 
 
-# @partial(jax.jit, static_argnums=(0, 1, 2, 3))
 def get_factorizations(
-    params: Dict,
-    prior_params: Tuple[Callable, Callable],
-    X: jnp.ndarray,
-    Y: jnp.ndarray,
-    X_new: jnp.ndarray,
-) -> Tuple[Tuple[jnp.ndarray, bool], jnp.ndarray]:
+    X: np.ndarray,
+    Y: np.ndarray,
+    likelihood_noise: float,
+    mean_f: Callable,
+    kernel: Callable,
+) -> Tuple[Tuple[np.ndarray, bool], np.ndarray]:
     """Cholesky Factorization"""
-    (mu_func, cov_func) = prior_params
 
     # ==========================
     # 1. GP PRIOR
     # ==========================
-    mu_x = mu_func(X)
-    Kxx = cov_func(params, X, X)
+    mu_x = mean_f(X)
+    Kxx = kernel(X, X)
 
     # ===========================
     # 2. CHOLESKY FACTORIZATION
     # ===========================
+
     L, alpha = cholesky_factorization(
-        Kxx + (params["likelihood_noise"] + 1e-7) * jnp.eye(Kxx.shape[0]),
-        Y - mu_x.reshape(-1, 1),
+        Kxx + likelihood_noise ** 2 * np.eye(Kxx.shape[0]),
+        Y.reshape(-1, 1) - mu_x.reshape(-1, 1),
     )
 
     # ================================
@@ -51,3 +51,23 @@ def get_factorizations(
     # ================================
 
     return L, alpha
+
+
+def softplus_inverse(x: np.ndarray) -> np.ndarray:
+    """Softplus inverse function
+
+    Computes the element-wise function:
+
+    .. math::
+        \mathrm{softplus_inverse}(x) = \log(e^x - 1)
+    """
+    return np.log(np.exp(x) - 1.0)
+
+
+def confidence_intervals(
+    predictions: JaxArray, variance: JaxArray, ci: float = 96
+) -> Tuple[JaxArray, JaxArray]:
+    bound = (100 - ci) / 2
+    ci_lower = predictions.squeeze() - bound * np.sqrt(variance.squeeze())
+    ci_upper = predictions.squeeze() + bound * np.sqrt(variance.squeeze())
+    return ci_lower, ci_upper

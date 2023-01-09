@@ -2,149 +2,156 @@ from functools import partial
 from typing import Callable, Dict, Tuple
 
 import jax
-import jax.numpy as jnp
+import jax.numpy as np
+import objax
+from objax.typing import JaxArray
+from tensorflow_probability.substrates.jax import distributions as tfd
 
 from jaxkern.gp.utils import get_factorizations
 
-
-def gp_prior(
-    params: Dict, mu_f: Callable, cov_f: Callable, x: jnp.ndarray
-) -> Tuple[jnp.ndarray, jnp.ndarray]:
-    return mu_f(x), cov_f(params, x, x)
+DEFAULT_VARIANCE_LOWER_BOUND = 1e-6
 
 
-@partial(jax.jit, static_argnums=(0, 1, 2, 3, 5, 6))
-def posterior(
-    params: Dict,
-    prior_params: Tuple[Callable, Callable],
-    X: jnp.ndarray,
-    Y: jnp.ndarray,
-    X_new: jnp.ndarray,
-    likelihood_noise: bool = False,
-    return_cov: bool = False,
-) -> Tuple[jnp.ndarray, jnp.ndarray]:
-    (mu_func, cov_func) = prior_params
+class ExactGP(objax.Module):
+    """Exact GP
 
-    # ==============================
-    # Get Factorizations (L, alpha)
-    # ==============================
-    L, alpha = get_factorizations(
-        params=params,
-        prior_params=prior_params,
-        X=X,
-        Y=Y,
-        X_new=X_new,
-    )
+    Parameters
+    ----------
+    mean : Callable
+        the gp mean function
+    kernel : Callable
+        the gp kernel function
+    noise : float
+        the noise likelihood
+    jitter : float
+        the 'jitter' to allow for better conditioning of the cholesky
+    """
 
-    # ================================
-    # 4. PREDICTIVE MEAN DISTRIBUTION
-    # ================================
+    def __init__(self, mean, kernel, noise: float = 0.1, jitter: float = 1e-5):
 
-    # calculate transform kernel
-    KxX = cov_func(params, X_new, X)
+        # MEAN FUNCTION
+        self.mean = mean
 
-    # Calculate the Mean
-    mu_y = jnp.dot(KxX, alpha)
+        # KERNEL Function
+        self.kernel = kernel
 
-    # =====================================
-    # 5. PREDICTIVE COVARIANCE DISTRIBUTION
-    # =====================================
-    v = jax.scipy.linalg.cho_solve(L, KxX.T)
+        # noise level
+        self.noise = objax.TrainVar(np.array([noise]))
 
-    # Calculate kernel matrix for inputs
-    Kxx = cov_func(params, X_new, X_new)
+        # jitter (make it correctly conditioned)
+        self.jitter = jitter
 
-    cov_y = Kxx - jnp.dot(KxX, v)
+    def forward(self, X: JaxArray) -> JaxArray:
+        """Fits a GP distribution
 
-    # Likelihood Noise
-    if likelihood_noise is True:
-        cov_y += params["likelihood_noise"]
+        Parameters
+        ----------
+        X : JaxArray
+            the input dataset
 
-    # return variance (diagonals of covaraince)
-    if return_cov is not True:
-        cov_y = jnp.diag(cov_y)
+        Returns
+        -------
+        gp_dist :
+            Returns a gp distribution.
+        """
+        # mean function
+        mu = self.mean(X)
 
-    return mu_y, cov_y
+        # kernel function
+        cov = self.kernel(X, X)
 
+        # noise model
+        cov += (
+            np.clip(
+                jax.nn.softplus(self.noise.value) ** 2,
+                DEFAULT_VARIANCE_LOWER_BOUND,
+                10.0,
+            )
+            * np.eye(X.shape[0])
+        )
 
-@partial(jax.jit, static_argnums=(0, 1, 2, 3))
-def predictive_mean(
-    params: Dict,
-    prior_params: Tuple[Callable, Callable],
-    X: jnp.ndarray,
-    Y: jnp.ndarray,
-    X_new: jnp.ndarray,
-) -> jnp.ndarray:
+        # jitter
+        cov += self.jitter * np.eye(X.shape[0])
 
-    (_, cov_func) = prior_params
+        # calculate cholesky
+        cov_chol = np.linalg.cholesky(cov)
 
-    # ==============================
-    # Get Factorizations (L, alpha)
-    # ==============================
-    L, alpha = get_factorizations(
-        params=params,
-        prior_params=prior_params,
-        X=X,
-        Y=Y,
-        X_new=X_new,
-    )
+        # gaussian process likelihood
+        return tfd.MultivariateNormalTriL(loc=mu.squeeze(), scale_tril=cov_chol)
 
-    # ================================
-    # 4. PREDICTIVE MEAN DISTRIBUTION
-    # ================================
+    def cache_factorizations(self, X: JaxArray, y: JaxArray) -> None:
+        """Cache Factorizations
+        The allows one to speed up the predictions
 
-    # calculate transform kernel
-    KxX = cov_func(params, X_new, X)
+        Parameters
+        ----------
+        X : JaxArray
+            input trained dataset, (n_samples, n_features)
+        y : JaxArray
+            output trained dataset, (n_samples,)
+        """
+        # calculate factorizations
+        self.X_train_, self.y_train_ = X, y
+        self.L, self.weights = get_factorizations(
+            X, y, jax.nn.softplus(self.noise.value), self.mean, self.kernel
+        )
 
-    # Calculate the Mean
-    mu_y = jnp.dot(KxX, alpha)
+    def predict_f(self, X, return_std: bool = True):
+        """Predictive mean and variance on new data
 
-    return mu_y.squeeze()
+        Parameters
+        ----------
+        X : JaxArray
+            the dataset to do predictions, (n_samples, n_features)
 
+        return_std : bool
+            option to return the standard deviation or the covariance (default=True)
 
-@partial(jax.jit, static_argnums=(0, 1, 2, 3, 5, 6))
-def predictive_variance(
-    params: Dict,
-    prior_params: Tuple[Callable, Callable],
-    X: jnp.ndarray,
-    Y: jnp.ndarray,
-    X_new: jnp.ndarray,
-    likelihood_noise: bool = False,
-    return_cov: bool = False,
-) -> jnp.ndarray:
+        Returns
+        -------
+        mu : JaxArray
+            the predictive mean, (n_samples)
+        var : JaxArray
+            the predictive variance, (n_samples)
+        cov : JaxArray
+            the predictive covariance, (n_samples, n_samples)
+        """
+        # projection kernel
+        K_Xx = self.kernel(X, self.X_train_)
 
-    (mu_func, cov_func) = prior_params
+        # Calculate the Mean
+        mu_y = np.dot(K_Xx, self.weights)
 
-    # ==============================
-    # Get Factorizations (L, alpha)
-    # ==============================
-    L, alpha = get_factorizations(
-        params=params,
-        prior_params=prior_params,
-        X=X,
-        Y=Y,
-        X_new=X_new,
-    )
+        if return_std:
+            v = jax.scipy.linalg.cho_solve(self.L, K_Xx.T)
 
-    # =====================================
-    # 5. PREDICTIVE COVARIANCE DISTRIBUTION
-    # =====================================
+            K_xx = self.kernel(X, X)
 
-    # calculate transform kernel
-    KxX = cov_func(params, X_new, X)
+            cov_y = K_xx - np.dot(K_Xx, v)
 
-    v = jax.scipy.linalg.cho_solve(L, KxX.T)
+            return mu_y, cov_y
 
-    # Calculate kernel matrix for inputs
-    Kxx = cov_func(params, X_new, X_new)
+        else:
+            return mu_y
 
-    cov_y = Kxx - jnp.dot(KxX, v)
+    def predict_y(self, X, return_std: bool = True):
 
-    # Likelihood Noise
-    if likelihood_noise is True:
-        cov_y += params["likelihood_noise"]
+        # projection kernel
+        K_Xx = self.kernel(X, self.X_train_)
 
-    # return variance (diagonals of covaraince)
-    if return_cov is not True:
-        cov_y = jnp.diag(cov_y)
-    return cov_y.squeeze()
+        # Calculate the Mean
+        mu_y = np.dot(K_Xx, self.weights)
+
+        if return_std:
+            v = jax.scipy.linalg.cho_solve(self.L, K_Xx.T)
+
+            K_xx = self.kernel(X, X)
+
+            cov_y = K_xx - np.dot(K_Xx, v)
+
+            return mu_y, cov_y + jax.nn.softplus(self.noise.value) ** 2 * np.eye(
+                cov_y.shape[0]
+            )
+
+        else:
+            return mu_y
