@@ -1,3 +1,6 @@
+This REPO is Archived as it is no longer maintained! Please see the [JaxKern](https://github.com/JaxGaussianProcesses/JaxKern) library for more updated kernel functions.
+
+---
 # Kernel Methods with Jax
 
 * Authors: J. Emmanuel Johnson, ISP-Lab
