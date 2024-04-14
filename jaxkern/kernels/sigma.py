@@ -1,11 +1,12 @@
 import jax
 import jax.numpy as np
+from objax.typing import JaxArray
 
 from jaxkern.dist import pdist_squareform
 from jaxkern.utils import ensure_min_eps
 
 
-def estimate_sigma_median(X: np.ndarray, Y: np.ndarray) -> float:
+def estimate_sigma_median(X: JaxArray, Y: JaxArray) -> JaxArray:
     """Estimate sigma using the median distance
 
     Parameters
@@ -27,14 +28,14 @@ def estimate_sigma_median(X: np.ndarray, Y: np.ndarray) -> float:
     # dists = dists[np.nonzero(dists)]
 
     # get the median value
-    sigma = np.median(dists[np.nonzero(dists)])
+    dists = np.clip(dists, a_min=1e-5, a_max=np.inf)
+    median_dist = np.median(dists)
+    sigma = median_dist / np.sqrt(2.0)
 
     return sigma
 
 
-def estimate_sigma_mean_kth(
-    X: np.ndarray, Y: np.ndarray, percent: float = 0.3
-) -> float:
+def estimate_sigma_mean_kth(X: JaxArray, Y: JaxArray, percent: float = 0.3) -> JaxArray:
     """Estimates the sigma using the mean kth distance
 
     This calculates the sigma value using the kth percent
@@ -43,9 +44,10 @@ def estimate_sigma_mean_kth(
 
     Parameters
     ----------
-    dists : jax.numpy.ndarray
-        the distance matrix already calculate (n_samples, n_samples)
-
+    X : JaxArray
+        dataset I (n_samples, n_features)
+    Y : JaxArray
+        dataset II (n_samples, n_features)
     k : int
         the kth value from the (default=0.15)
 
@@ -60,12 +62,13 @@ def estimate_sigma_mean_kth(
 
     # median distances
     sigma = np.mean(dists[np.nonzero(dists)])
+
     return sigma
 
 
 def estimate_sigma_median_kth(
-    X: np.ndarray, Y: np.ndarray, percent: float = 0.3
-) -> float:
+    X: JaxArray, Y: JaxArray, percent: float = 0.3
+) -> JaxArray:
     """Estimates the sigma using the median kth distance
 
     This calculates the sigma value using the kth percent
@@ -74,11 +77,12 @@ def estimate_sigma_median_kth(
 
     Parameters
     ----------
-    dists : jax.numpy.ndarray
-        the distance matrix already calculate (n_samples, n_samples)
-
+    X : JaxArray
+        dataset I (n_samples, n_features)
+    Y : JaxArray
+        dataset II (n_samples, n_features)
     k : int
-        the kth value from the (default=0.15)
+        the kth value from the (default=0.3)
 
     Returns
     -------
@@ -106,7 +110,7 @@ def _estimate_sigma_kth(
     return sigma
 
 
-def scotts_factor(X: np.ndarray) -> float:
+def scotts_factor(X: JaxArray) -> JaxArray:
     """Scotts Method to estimate the length scale of the
     rbf kernel.
 
@@ -116,12 +120,12 @@ def scotts_factor(X: np.ndarray) -> float:
 
     Parameters
     ----------
-    X : jax.numpy.ndarry
+    X : JaxArray
         Input array
 
     Returns
     -------
-    sigma : float
+    sigma : JaxArray
         the length scale estimated
 
     References
@@ -133,7 +137,7 @@ def scotts_factor(X: np.ndarray) -> float:
     return np.power(n_samples, -1 / (n_features + 4.0))
 
 
-def silvermans_factor(X: np.ndarray) -> float:
+def silvermans_factor(X: JaxArray) -> JaxArray:
     """Silvermans method used to estimate the length scale
     of the rbf kernel.
 
@@ -143,12 +147,12 @@ def silvermans_factor(X: np.ndarray) -> float:
 
     Parameters
     ----------
-    X : jax.numpy.ndarray,
+    X : JaxArray
         Input array (n_samples, n_features)
 
     Returns
     -------
-    sigma : float
+    sigma : JaxArray
         the length scale estimated
 
     References
@@ -163,7 +167,7 @@ def silvermans_factor(X: np.ndarray) -> float:
     return np.power(base, -1 / (n_features + 4.0))
 
 
-def kth_percent_distance(dists: np.ndarray, k: float = 0.3) -> np.ndarray:
+def kth_percent_distance(dists: JaxArray, k: float = 0.3) -> JaxArray:
     """kth percent distance in a gram matrix
 
     This calculates the kth percent in an (NxN) matrix.
@@ -172,7 +176,7 @@ def kth_percent_distance(dists: np.ndarray, k: float = 0.3) -> np.ndarray:
 
     Parameters
     ----------
-    dists : jax.numpy.ndarray
+    dists : JaxArray
         the distance matrix already calculate (n_samples, n_samples)
 
     k : int
@@ -192,7 +196,7 @@ def kth_percent_distance(dists: np.ndarray, k: float = 0.3) -> np.ndarray:
     return k_dist
 
 
-def gamma_to_sigma(gamma: float = 1.0) -> float:
+def gamma_to_sigma(gamma: float = JaxArray) -> JaxArray:
     """Convert sigma to gamma
 
     .. math::
@@ -202,7 +206,7 @@ def gamma_to_sigma(gamma: float = 1.0) -> float:
     return ensure_min_eps(np.sqrt(1.0 / (2 * gamma)))
 
 
-def sigma_to_gamma(sigma: float = 0.1) -> float:
+def sigma_to_gamma(sigma: float = JaxArray) -> JaxArray:
     """Convert sigma to gamma
 
     .. math::
